@@ -1,0 +1,79 @@
+// !$*UTF8*$!
+{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+4AFB12F99BF0332D7C72078B = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/App/RallyTripApp.swift"; sourceTree = SOURCE_ROOT; };
+885F31381DF486B96707932E = { isa = PBXBuildFile; fileRef = 4AFB12F99BF0332D7C72078B; };
+2E51595F723ED4DD2A544717 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Services/LocationEngine.swift"; sourceTree = SOURCE_ROOT; };
+9296A207F3BCF256230AD72C = { isa = PBXBuildFile; fileRef = 2E51595F723ED4DD2A544717; };
+A198038745EB5288AFE1C3AB = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Services/RallySession.swift"; sourceTree = SOURCE_ROOT; };
+1723802280C8A29E6F07D14D = { isa = PBXBuildFile; fileRef = A198038745EB5288AFE1C3AB; };
+5B4548A3E65F6A7514127A63 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Storage/RallyStore.swift"; sourceTree = SOURCE_ROOT; };
+8EFCB7EACA2CEF5EBB1AB796 = { isa = PBXBuildFile; fileRef = 5B4548A3E65F6A7514127A63; };
+D40733C95A4B1313F680648A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Views/CalibrationView.swift"; sourceTree = SOURCE_ROOT; };
+1CEA57997CF89BC1979D787C = { isa = PBXBuildFile; fileRef = D40733C95A4B1313F680648A; };
+615038E8194968DED9696FD7 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Views/Components.swift"; sourceTree = SOURCE_ROOT; };
+16235C4801DBBCD21BB14746 = { isa = PBXBuildFile; fileRef = 615038E8194968DED9696FD7; };
+CC87898362F60D51B0318695 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Views/HomeView.swift"; sourceTree = SOURCE_ROOT; };
+7192B1E0931C1AF097F91AB8 = { isa = PBXBuildFile; fileRef = CC87898362F60D51B0318695; };
+9C0B69F7F3B0469F09B7893F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Views/RegularityView.swift"; sourceTree = SOURCE_ROOT; };
+53D7F42FAA6B4AA8B7F467FC = { isa = PBXBuildFile; fileRef = 9C0B69F7F3B0469F09B7893F; };
+29DCEC25879BB895FAA27E7C = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Views/RouteView.swift"; sourceTree = SOURCE_ROOT; };
+ADE8791C8A7FFF011FD9979D = { isa = PBXBuildFile; fileRef = 29DCEC25879BB895FAA27E7C; };
+BFEDEC63161CC0FB7231B5F8 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Views/SettingsView.swift"; sourceTree = SOURCE_ROOT; };
+0C16002EE4CD21AAD3C5F88C = { isa = PBXBuildFile; fileRef = BFEDEC63161CC0FB7231B5F8; };
+1989D33113B0C2EDE3F4B7F8 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RallyTrip/Views/TripmasterView.swift"; sourceTree = SOURCE_ROOT; };
+ED6C93AE881B7DC0D970D0D0 = { isa = PBXBuildFile; fileRef = 1989D33113B0C2EDE3F4B7F8; };
+0AF7FE296318F56FFB19E72F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/RallyCore/DistanceEngine.swift"; sourceTree = SOURCE_ROOT; };
+0FE601261305888A1675953F = { isa = PBXBuildFile; fileRef = 0AF7FE296318F56FFB19E72F; };
+DBB6086311B29EFACED5BDEE = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/RallyCore/Models.swift"; sourceTree = SOURCE_ROOT; };
+509BAF88AE1DA7B640C93BD3 = { isa = PBXBuildFile; fileRef = DBB6086311B29EFACED5BDEE; };
+F54D3E6687492DF1AC8E38BD = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/RallyCore/RegularityEngine.swift"; sourceTree = SOURCE_ROOT; };
+B585F7164EE4850638111417 = { isa = PBXBuildFile; fileRef = F54D3E6687492DF1AC8E38BD; };
+53FFA4975B6606D56E784FD1 = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "RallyTrip/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
+1CE8DFA3ABEC2C0EC808EED3 = { isa = PBXBuildFile; fileRef = 53FFA4975B6606D56E784FD1; };
+AD66E3E900FEF81F78E83555 = { isa = PBXFileReference; lastKnownFileType = text.xml; path = "RallyTrip/PrivacyInfo.xcprivacy"; sourceTree = SOURCE_ROOT; };
+F3835B8F98851191FC6792F7 = { isa = PBXBuildFile; fileRef = AD66E3E900FEF81F78E83555; };
+A8792157CB4F27FB949C035F = { isa = PBXFileReference; explicitFileType = wrapper.application; path = RallyTrip.app; sourceTree = BUILT_PRODUCTS_DIR; };
+0035FE99EA2940F7FA633A58 = { isa = PBXGroup; children = (4AFB12F99BF0332D7C72078B,2E51595F723ED4DD2A544717,A198038745EB5288AFE1C3AB,5B4548A3E65F6A7514127A63,D40733C95A4B1313F680648A,615038E8194968DED9696FD7,CC87898362F60D51B0318695,9C0B69F7F3B0469F09B7893F,29DCEC25879BB895FAA27E7C,BFEDEC63161CC0FB7231B5F8,1989D33113B0C2EDE3F4B7F8,0AF7FE296318F56FFB19E72F,DBB6086311B29EFACED5BDEE,F54D3E6687492DF1AC8E38BD,53FFA4975B6606D56E784FD1,AD66E3E900FEF81F78E83555,5BAB63C60BF318DAB40A4F04,); sourceTree = "<group>"; };
+5BAB63C60BF318DAB40A4F04 = { isa = PBXGroup; children = (A8792157CB4F27FB949C035F,); name = Products; sourceTree = "<group>"; };
+878A52FC5FF6A57D50B7B870 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (885F31381DF486B96707932E,9296A207F3BCF256230AD72C,1723802280C8A29E6F07D14D,8EFCB7EACA2CEF5EBB1AB796,1CEA57997CF89BC1979D787C,16235C4801DBBCD21BB14746,7192B1E0931C1AF097F91AB8,53D7F42FAA6B4AA8B7F467FC,ADE8791C8A7FFF011FD9979D,0C16002EE4CD21AAD3C5F88C,ED6C93AE881B7DC0D970D0D0,0FE601261305888A1675953F,509BAF88AE1DA7B640C93BD3,B585F7164EE4850638111417,); runOnlyForDeploymentPostprocessing = 0; };
+41D311A605520FC7B8B9A980 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (1CE8DFA3ABEC2C0EC808EED3,F3835B8F98851191FC6792F7,); runOnlyForDeploymentPostprocessing = 0; };
+E2AA269EB967A8853A258BFA = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+34A04005BCAF206EEC990BD9 = { isa = PBXNativeTarget; buildConfigurationList = 2D595961F8662B2914D28638; buildPhases = (878A52FC5FF6A57D50B7B870,E2AA269EB967A8853A258BFA,41D311A605520FC7B8B9A980,); buildRules = (); dependencies = (); name = RallyTrip; productName = RallyTrip; productReference = A8792157CB4F27FB949C035F; productType = "com.apple.product-type.application"; };
+2B23A31EEC75B029432F2445 = { isa = XCBuildConfiguration; name = Debug; buildSettings = {
+    SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; CLANG_ENABLE_MODULES = YES;
+    SWIFT_VERSION = 5.0; SWIFT_STRICT_CONCURRENCY = targeted;
+    DEBUG_INFORMATION_FORMAT = dwarf;
+    SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG";
+    ENABLE_TESTABILITY = YES;
+  }; };
+EDDA600A3F771F810A8065C9 = { isa = XCBuildConfiguration; name = Debug; buildSettings = {
+    PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = de.rallytrip.app;
+    INFOPLIST_FILE = RallyTrip/Info.plist; GENERATE_INFOPLIST_FILE = NO;
+    TARGETED_DEVICE_FAMILY = 1; CODE_SIGN_STYLE = Automatic;
+    CURRENT_PROJECT_VERSION = 1; MARKETING_VERSION = 1.0;
+    ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+    SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO;
+    LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+  }; };
+07CA1E69F6068DEA30A4DA6B = { isa = XCBuildConfiguration; name = Release; buildSettings = {
+    SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; CLANG_ENABLE_MODULES = YES;
+    SWIFT_VERSION = 5.0; SWIFT_STRICT_CONCURRENCY = targeted;
+    DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+    SWIFT_OPTIMIZATION_LEVEL = "-O";
+    SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
+    ENABLE_TESTABILITY = NO;
+  }; };
+594BCDCC96599D88EF772A08 = { isa = XCBuildConfiguration; name = Release; buildSettings = {
+    PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = de.rallytrip.app;
+    INFOPLIST_FILE = RallyTrip/Info.plist; GENERATE_INFOPLIST_FILE = NO;
+    TARGETED_DEVICE_FAMILY = 1; CODE_SIGN_STYLE = Automatic;
+    CURRENT_PROJECT_VERSION = 1; MARKETING_VERSION = 1.0;
+    ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+    SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO;
+    LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+  }; };
+F1EC23546E9F76EBA9380829 = { isa = XCConfigurationList; buildConfigurations = (2B23A31EEC75B029432F2445,07CA1E69F6068DEA30A4DA6B,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+2D595961F8662B2914D28638 = { isa = XCConfigurationList; buildConfigurations = (EDDA600A3F771F810A8065C9,594BCDCC96599D88EF772A08,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+244210E48437B6556980A702 = { isa = PBXProject; attributes = { LastUpgradeCheck = 1600; TargetAttributes = { 34A04005BCAF206EEC990BD9 = { CreatedOnToolsVersion = 16.0; }; }; }; buildConfigurationList = F1EC23546E9F76EBA9380829; compatibilityVersion = "Xcode 14.0"; developmentRegion = de; hasScannedForEncodings = 0; knownRegions = (de,en,Base,); mainGroup = 0035FE99EA2940F7FA633A58; productRefGroup = 5BAB63C60BF318DAB40A4F04; projectDirPath = ""; projectRoot = ""; targets = (34A04005BCAF206EEC990BD9,); };
+}; rootObject = 244210E48437B6556980A702; }

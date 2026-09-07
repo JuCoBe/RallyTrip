@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111413">
+  <meta name="description" content="RallyTrip is a native iPhone rally tripmaster with GPS distance, regularity timing, calibration and roadbook tools. Explore the project and download the Xcode source.">
+  <title>RallyTrip — Every metre. Every second.</title>
+  <link rel="icon" href="assets/icon.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="wrap nav">
+    <a class="brand" href="#" aria-label="RallyTrip home"><img src="assets/icon.png" width="38" height="38" alt="">RALLYTRIP<span class="version">/ 01</span></a>
+    <nav aria-label="Main navigation"><a href="#features">The instruments</a><a href="#start">Build & run <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main id="main">
+    <section class="wrap hero" aria-labelledby="hero-title">
+      <div class="intro">
+        <p class="eyebrow"><span class="dot"></span> NATIVE IPHONE PROJECT · iOS 17+</p>
+        <h1 id="hero-title">Every metre.<br>Every <em>second.</em></h1>
+        <p class="lede">A rally tripmaster for the seat beside the driver. Keep your distance, follow the roadbook and find your rhythm through every regularity stage.</p>
+        <div class="actions"><a class="button primary" href="downloads/RallyTrip-iOS.zip" download>Download Xcode project <span aria-hidden="true">↗</span></a><a class="text-link" href="#start">How to try it <span aria-hidden="true">↓</span></a></div>
+        <p class="release-note">Pre-release source project. The iOS build and device tests are still pending. A TestFlight version is not available yet.</p>
+      </div>
+      <div class="instrument" aria-label="Tripmaster interface concept with illustrative values">
+        <div class="instrument-top"><span>TRIPMASTER</span><span class="sample-tag">EXAMPLE</span></div>
+        <div class="total"><span class="eyebrow">TOTAL DISTANCE</span><div class="digits">12.483 <small>km</small></div><div class="total-foot"><span>GPS TRIPMASTER</span><span>× 1.01153</span></div></div>
+        <div class="readouts"><div><span class="eyebrow">ROADBOOK TRIP</span><strong>3.274 <small>km</small></strong></div><div><span class="eyebrow">GPS SPEED</span><strong>47.3 <small>km/h</small></strong></div></div>
+        <div class="timing"><div><span class="eyebrow">REGULARITY DELTA</span><strong>+1.24 <small>s</small></strong></div><span class="late">BEHIND TARGET</span></div>
+        <p class="instrument-caption">Interface concept · illustrative values, not live GPS</p>
+      </div>
+    </section>
+    <div class="spec-strip"><div class="wrap specs"><span>SWIFT + SWIFTUI</span><span>CORE LOCATION</span><span>MAPKIT</span><span>LOCAL STORAGE</span></div></div>
+    <section id="features" class="wrap section">
+      <div class="section-heading"><p class="eyebrow">01 / THE INSTRUMENTS</p><h2>Built around the stage.</h2><p>Separate tools for distance, timing and the next instruction.</p></div>
+      <div class="features">
+        <article><span class="number">01</span><h3>Make every metre count.</h3><p>Independent TOTAL and TRIP counters. Correct by 1, 10 or 100 metres, or sync the total directly to your roadbook.</p><span class="feature-label">TRIPMASTER</span></article>
+        <article><span class="number">02</span><h3>Stay on your target time.</h3><p>Set a regularity speed plan with multiple changes. Target time is calculated segment by segment, with a signed time deviation.</p><span class="feature-label">REGULARITY</span></article>
+        <article><span class="number">03</span><h3>Match your measured route.</h3><p>Compare an official calibration distance with the GPS measurement. Save the resulting factor in a vehicle profile.</p><span class="feature-label">CALIBRATION</span></article>
+        <article><span class="number">04</span><h3>Keep the roadbook close.</h3><p>Add kilometre points and direction notes. View recorded routes on a map and export saved GPS tracks as GPX files.</p><span class="feature-label">ROUTE & ROADBOOK</span></article>
+      </div>
+    </section>
+    <section id="start" class="wrap section start">
+      <div class="section-heading"><p class="eyebrow">02 / THE FIRST RUN</p><h2>Your next start line.</h2><p>The app is a native iPhone project. Use a Mac with Xcode to build it; the included demo mode lets you explore without driving.</p><a class="text-link" href="downloads/RallyTrip-iOS.zip" download>Get the source project <span aria-hidden="true">↗</span></a></div>
+      <ol class="steps">
+        <li><h3>Open the project.</h3><p>Unzip the download on a Mac and open <code>RallyTrip.xcodeproj</code> in Xcode 15 or newer. Select the RallyTrip scheme and an iPhone simulator.</p></li>
+        <li><h3>Try a simulated stage.</h3><p>Run the app, then enable <strong>Einstellungen → Demo-Modus</strong>. Choose <strong>Tripmaster → Fahrt starten</strong> or <strong>Regularity → WP starten</strong>. The app interface is in German.</p></li>
+        <li><h3>Move to your iPhone.</h3><p>Select your signing team in Xcode and run on your device. Allow precise location access for GPS measurement. The included README covers testing and setup.</p></li>
+      </ol>
+    </section>
+    <section class="wrap status section" aria-labelledby="status-title">
+      <p class="eyebrow">03 / PROJECT STATUS</p>
+      <div class="status-grid"><h2 id="status-title">Source available.<br>Testing comes next.</h2><div><p>The project includes 16 core test cases and a macOS build workflow. Project structure and resources have been checked; the Swift tests and iOS build have not yet been run.</p><p>TestFlight distribution requires a successful signed build and App Store Connect setup. OBD and external GNSS receivers are planned extensions, not connected features.</p><p class="muted">Hundredths of a second describe the display resolution, not the accuracy of an iPhone GPS measurement.</p></div></div>
+    </section>
+  </main>
+  <footer class="wrap footer"><a class="brand" href="#">RALLYTRIP</a><span>GPS tripmaster & regularity timing.</span><a href="#start">Build your first run <span aria-hidden="true">↑</span></a></footer>
+</body>
+</html>

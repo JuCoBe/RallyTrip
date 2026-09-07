@@ -1,0 +1,11 @@
+name: iOS build and core tests
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  verify:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core calculations and GPS filtering
+        run: swift test
+      - name: Compile iPhone app
+        run: xcodebuild -project RallyTrip.xcodeproj -scheme RallyTrip -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

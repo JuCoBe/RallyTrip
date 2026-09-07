@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key><string>RallyTrip</string>
+    <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>LSRequiresIPhoneOS</key><true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key><true/>
+    <key>UILaunchScreen</key><dict/>
+    <key>UIApplicationSceneManifest</key>
+    <dict><key>UIApplicationSupportsMultipleScenes</key><false/><key>UISceneConfigurations</key><dict/></dict>
+    <key>UISupportedInterfaceOrientations</key>
+    <array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>RallyTrip benötigt deinen genauen Standort, um Geschwindigkeit, Rallyestrecke und Zeitabweichung zu messen und deine Fahrt aufzuzeichnen.</string>
+    <key>NSLocationTemporaryUsageDescriptionDictionary</key>
+    <dict><key>RallyMeasurement</key><string>Die Rallye-Streckenmessung benötigt genaue GPS-Positionen.</string></dict>
+    <key>UIBackgroundModes</key><array><string>location</string><string>audio</string></array>
+    <key>UIFileSharingEnabled</key><true/>
+    <key>LSSupportsOpeningDocumentsInPlace</key><true/>
+    <key>UTExportedTypeDeclarations</key>
+    <array><dict>
+        <key>UTTypeIdentifier</key><string>de.rallytrip.gpx</string>
+        <key>UTTypeDescription</key><string>GPS Exchange Format</string>
+        <key>UTTypeConformsTo</key><array><string>public.xml</string></array>
+        <key>UTTypeTagSpecification</key><dict>
+            <key>public.filename-extension</key><array><string>gpx</string></array>
+            <key>public.mime-type</key><string>application/gpx+xml</string>
+        </dict>
+    </dict></array>
+</dict>
+</plist>
