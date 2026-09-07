@@ -53,6 +53,8 @@ public struct CalibrationProfile: Codable, Identifiable, Equatable {
     public var id = UUID()
     public var name: String
     public var factor: Double
+    /// Optional to keep archives from the first version readable.
+    public var history: [CalibrationRecord]?
     public init(name: String, factor: Double = 1) { self.name = name; self.factor = factor }
 }
 

@@ -25,6 +25,8 @@ final class RallySession: ObservableObject {
     @Published var stageName = "WP 01"
     @Published var errorMessage: String?
     @Published var notice: String?
+    @Published var calibrationMeasurements: [CalibrationMeasurement] = []
+    @Published private(set) var calibrationCapture: CalibrationCapture?
 
     private let location = LocationEngine()
     private let speech = AVSpeechSynthesizer()
@@ -127,6 +129,9 @@ final class RallySession: ObservableObject {
     }
 
     func startStage(at date: Date? = nil) {
+        guard calibrationCapture == nil else {
+            errorMessage = "Beende oder verwirf zuerst die laufende Kalibriermessung."; return
+        }
         guard !stageActive, state != .scheduled, state != .paused else { return }
         if state == .ready { startTrip() }
         rideSegments = data.settings.segments
@@ -160,6 +165,7 @@ final class RallySession: ObservableObject {
     func pauseOrResume() {
         guard state == .running || state == .paused else { return }
         if state == .running {
+            calibrationCapture?.markInterrupted()
             tripClock.pause(at: now)
             // The competition clock continues while distance measurement is paused.
             state = .paused
@@ -198,6 +204,7 @@ final class RallySession: ObservableObject {
         do { try RallyStore.save(next) }
         catch { errorMessage = "Fahrt nicht gespeichert: \(error.localizedDescription)"; return }
         data = next
+        calibrationCapture?.markInterrupted()
         location.stop(); tripClock.pause(at: now); stageClock.pause(at: now)
         state = .ready; stageActive = false; deadline = nil; countdown = nil
         speed = 0; gpsStatus = "Fahrt gespeichert"; accuracy = nil
@@ -258,6 +265,7 @@ final class RallySession: ObservableObject {
             }
         }
         if !isDemo, let fix = lastGoodFix, Date().timeIntervalSince(fix) > 5, state != .paused {
+            if calibrationCapture?.hasFix == true { calibrationCapture?.markInterrupted() }
             speed = 0; accuracy = nil; gpsStatus = "GPS-Signal verloren · Messung unterbrochen"
         }
         if stageActive, state == .running { announceChange() }
@@ -272,17 +280,20 @@ final class RallySession: ObservableObject {
         guard state == .running || state == .scheduled,
               point.timestamp >= acceptedAfter else { return }
         guard isDemo || fullAccuracy else {
+            if calibrationCapture?.hasFix == true { calibrationCapture?.markInterrupted() }
             speed = 0; accuracy = nil
             gpsStatus = "Genauer Standort erforderlich – keine Streckenmessung"
             return
         }
         guard let sample = filter.ingest(point) else {
+            if calibrationCapture?.hasFix == true { calibrationCapture?.markInterrupted() }
             if point.accuracy > 20 {
                 accuracy = nil; gpsStatus = "GPS zu ungenau · Messung unterbrochen"
             }
             return
         }
         lastGoodFix = point.timestamp
+        calibrationCapture?.acceptedFix(newPath: sample.startsNewPath)
         accuracy = point.accuracy
         gpsStatus = isDemo ? "DEMO · simuliertes GPS" : "GPS verbunden"
         speed = sample.displaySpeedKPH
@@ -322,6 +333,68 @@ final class RallySession: ObservableObject {
         UIApplication.shared.isIdleTimerDisabled = data.settings.keepAwake && busy
     }
     func requestPreciseLocation() { location.requestPreciseLocation() }
+    func beginCalibration(officialMeters: Double) {
+        guard calibrationCapture == nil, !stageActive, state != .scheduled, state != .paused else { return }
+        do {
+            _ = try CalibrationCapture(officialMeters: officialMeters, rawStart: 0, isDemo: isDemo)
+            if !busy { startTrip() }
+            calibrationCapture = try CalibrationCapture(officialMeters: officialMeters, rawStart: meter.raw, isDemo: isDemo)
+            filter.resetAnchor(); acceptedAfter = Date(); demoLastTick = now
+            feedback()
+        } catch { errorMessage = error.localizedDescription }
+    }
+    func completeCalibration() {
+        guard let capture = calibrationCapture else { return }
+        do {
+            calibrationMeasurements.append(try capture.finish(rawTotal: meter.raw))
+            calibrationCapture = nil; feedback()
+        } catch { errorMessage = error.localizedDescription }
+    }
+    func cancelCalibration() { calibrationCapture = nil }
+
+    @discardableResult
+    func saveCalibrationProfile(id: UUID?, name: String, factor: Double, method: String,
+                                measurements: [CalibrationMeasurement] = []) -> Bool {
+        guard !busy, calibrationCapture == nil else { errorMessage = CalibrationIssue.busy.localizedDescription; return false }
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty else { errorMessage = CalibrationIssue.emptyName.localizedDescription; return false }
+        do {
+            _ = try CalibrationEngine.validateFactor(factor)
+            var settings = data.settings
+            var profile: CalibrationProfile
+            if let id {
+                guard let existing = settings.profiles.first(where: { $0.id == id }) else { return false }
+                profile = existing
+            } else { profile = CalibrationProfile(name: cleanName) }
+            let record = CalibrationRecord(previousFactor: profile.factor, factor: factor, method: method,
+                                           measurements: measurements.filter(\.included))
+            profile.name = cleanName; profile.factor = factor
+            if method != "Umbenennung" { profile.history = (profile.history ?? []) + [record] }
+            if let index = settings.profiles.firstIndex(where: { $0.id == profile.id }) { settings.profiles[index] = profile }
+            else { settings.profiles.append(profile) }
+            settings.selectedProfile = profile.id
+            return saveCalibrationSettings(settings)
+        } catch { errorMessage = error.localizedDescription; return false }
+    }
+    func selectCalibrationProfile(_ id: UUID) {
+        guard !busy, calibrationCapture == nil, data.settings.profiles.contains(where: { $0.id == id }) else { return }
+        var settings = data.settings; settings.selectedProfile = id
+        _ = saveCalibrationSettings(settings)
+    }
+    @discardableResult
+    func deleteCalibrationProfile(_ id: UUID) -> Bool {
+        guard !busy, calibrationCapture == nil, data.settings.profiles.count > 1 else { return false }
+        var settings = data.settings
+        settings.profiles.removeAll { $0.id == id }
+        if settings.selectedProfile == id { settings.selectedProfile = settings.profiles.first?.id }
+        return saveCalibrationSettings(settings)
+    }
+    private func saveCalibrationSettings(_ settings: AppSettings) -> Bool {
+        guard storageReadable else { persist(); return false }
+        var next = data; next.settings = settings
+        do { try RallyStore.save(next); data = next; feedback(); return true }
+        catch { errorMessage = "Profil nicht gespeichert: \(error.localizedDescription)"; return false }
+    }
     func deleteRides(at offsets: IndexSet) {
         guard storageReadable else { persist(); return }
         var next = data

@@ -32,7 +32,7 @@ const scheme = read('RallyTrip.xcodeproj/xcshareddata/xcschemes/RallyTrip.xcsche
 assert(scheme.includes('BlueprintName="RallyTrip"'));
 const tests = walk('Tests').filter(f => f.endsWith('.swift'));
 const testCount = tests.reduce((count, file) => count + [...read(file).matchAll(/func test\w+\(/g)].length, 0);
-assert.equal(testCount, 16);
+assert.equal(testCount, 27);
 for (const file of [...sources, ...tests]) {
   assert(!read(file).includes('\uFFFD'), `Invalid UTF-8 in ${file}`);
   assert(!/^(<<<<<<<|=======|>>>>>>>)/m.test(read(file)), `Conflict marker in ${file}`);
@@ -40,4 +40,4 @@ for (const file of [...sources, ...tests]) {
 console.log(`PASS: ${objects.length} unique project objects; all references resolve.`);
 console.log(`PASS: ${sources.length} Swift sources included; scheme, plist keys, GPX type and resources present.`);
 console.log('PASS: 1024×1024 PNG app icon and JSON asset catalogs.');
-console.log(`FOUND: ${testCount} XCTest cases. Swift tests and iOS build require a Swift/Xcode host; not executed here.`);
+console.log(`FOUND: ${testCount} XCTest cases. This command checks structure only; see VALIDATION.md for executed tests.`);

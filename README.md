@@ -23,7 +23,7 @@ Lokal ansehen: `node scripts/preview-site.mjs`, anschließend `http://127.0.0.1:
 
 Zum Veröffentlichen die Projektdateien in das gewünschte GitHub-Repository hochladen und dort unter **Settings → Pages → Build and deployment → Source** die Option **GitHub Actions** auswählen. Der Workflow `.github/workflows/pages.yml` veröffentlicht `docs/` bei Änderungen auf `main` oder `master`; er kann auch manuell gestartet werden. Der tatsächliche Seitenlink erscheint nach erfolgreichem Lauf in der GitHub-Pages-Umgebung des Repositorys.
 
-Die Website verwendet relative Links und funktioniert deshalb auch unter einem Repository-Unterpfad. Beim Aktualisieren des iOS-Downloadpakets ebenfalls `docs/downloads/RallyTrip-iOS.zip` ersetzen. Eine GitHub-Veröffentlichung ist noch nicht erfolgt.
+Die Website verwendet relative Links und funktioniert deshalb auch unter einem Repository-Unterpfad. `pwsh -File scripts/package-project.ps1` erzeugt das aktuelle Downloadpaket und aktualisiert `docs/downloads/RallyTrip-iOS.zip`. Die ZIP enthält sich selbst nicht; nach dem Entpacken kann dieser Befehl den Website-Download wiederherstellen. Eine GitHub-Veröffentlichung ist noch nicht erfolgt.
 
 ## Umgesetzter Funktionsumfang
 
@@ -34,7 +34,7 @@ Die Website verwendet relative Links und funktioniert deshalb auch unter einem R
 | Regularity | Sofortstart, geplanter Start mit Countdown und Sekundenwahl, mehrere Schnittwechsel, abschnittsweise Sollzeit, Live-Zeitabweichung |
 | Signale | Schnittwechsel bei 300 / 200 / 100 / 50 m und beim Wechsel ansagen; Haptik |
 | GPS | Core Location, genaue Positionsanforderung, Qualitäts- und Sprungfilter, separate Geschwindigkeitsglättung, Hintergrundaufzeichnung |
-| Kalibrierung | Offizielle Strecke / rohe gemessene Strecke, Live-Messung einer Kalibrierstrecke, gespeicherte Fahrzeugprofile |
+| Kalibrierung | Live-Referenzstrecken, gewichtete Messreihen, Rückrechnung bereits kalibrierter Anzeigen, direkter Faktor, Fahrzeugprofile und Kalibrierhistorie |
 | Route | MapKit-Karte, getrennte Streckenlinien bei Messlücken und Pausen, manuell angelegte Roadbook-Punkte |
 | Fahrten | Lokales JSON-Archiv, Wiederherstellung des letzten Zwischenspeicherstands, GPX-Export und Löschen |
 | Darstellung | Hell, Dunkel, Nacht; Bildschirm während der Fahrt wach halten |
@@ -60,6 +60,22 @@ OBD, externe GNSS-Empfänger, Sensorfusion, Roadbook-Dateiimport und eine errech
 
 ## Speicherung
 
+### Erweiterte Kalibrierung
+
+Unter **Kalibrierung** stehen drei Wege zur Verfügung:
+
+1. **Referenzstrecke live messen:** Offizielle Länge eingeben, im Stand am Start die Messung beginnen und auf einen gültigen GPS-Punkt warten. Am Ziel erneut im Stand die Messung übernehmen. Die Rohstrecke hängt weder vom alten Faktor noch von TOTAL-Sync oder Trip-Reset ab. Weitere Durchfahrten können direkt ergänzt werden.
+2. **Messwerte manuell hinzufügen:** Offizielle Strecke und gemessene Rohstrecke eingeben. Falls nur eine bereits kalibrierte Anzeige vorliegt, den entsprechenden Schalter aktivieren und den damals verwendeten Faktor eintragen. Dabei eine Streckendifferenz ohne manuelle Korrekturen verwenden. Beispiel: 4,950 km Anzeige bei Faktor 1,1 ergeben 4,500 km Rohstrecke; bei 5,000 km Referenz ist der neue Faktor 1,11111.
+3. **Faktor direkt setzen:** Beim Fahrzeugprofil den Regler-Button öffnen oder ein neues Profil anlegen. Dort lassen sich Name und Faktor ändern, der Faktor auf 1 zurücksetzen und frühere Werte aus der Historie wiederherstellen. Erst **Speichern** übernimmt die Änderung.
+
+Mehrere eingeschaltete Messungen werden mit **Summe Referenzstrecken / Summe Rohstrecken** kombiniert. Es wird kein einfacher Mittelwert der Einzelfaktoren gebildet. Lange Messstrecken erhalten dadurch mehr Gewicht. Fehlerhafte Messungen können per Schalter ausgeschlossen oder per Wischgeste gelöscht werden.
+
+Die Auswertung zeigt den kombinierten Faktor, die gesamte Referenzstrecke, die Änderung zum aktiven Faktor und die Spannweite der Einzelfaktoren. Referenzen unter 1 km und eine relative Faktor-Spannweite über 1 % erzeugen Hinweise. Diese Schwellen dienen der Plausibilitätsprüfung, nicht als zugesicherte Messgenauigkeit.
+
+Während einer laufenden Live-Kalibrierung sind WP-Starts gesperrt. Eine Pause, ein verworfener GPS-Punkt nach Messbeginn oder eine erkannte GPS-Lücke macht die Messung dauerhaft ungültig; sie muss verworfen und neu begonnen werden. Vor dem ersten gültigen Punkt wartet die Messung auf Empfang. Demo- und echte Messungen dürfen nicht gemeinsam ausgewertet werden.
+
+Die laufende Messung und die Messreihe überstehen den Wechsel zwischen App-Ansichten. Noch nicht gespeicherte Messreihen sind Arbeitsspeicher und gehen beim Beenden der App verloren. Beim Speichern eines Profils werden die verwendeten Messungen mit Datum, vorherigem Faktor und neuem Faktor dauerhaft in dessen Historie übernommen. Bestehende Profile ohne Historie bleiben lesbar. Profile und Faktoren sind während einer Fahrt gesperrt; mindestens ein Profil bleibt erhalten.
+
 Alle Daten liegen im Dokumentenordner der App und sind über **Dateien → Auf meinem iPhone → RallyTrip** erreichbar:
 
 - `rallytrip.json`: Einstellungen, Kalibrierprofile, Schnittplan, Roadbook und beendete Fahrten.
@@ -81,7 +97,7 @@ xcodebuild -project RallyTrip.xcodeproj -scheme RallyTrip \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-Die 16 XCTest-Fälle decken einzelne und mehrere Sollschnitte, exakte Segmentgrenzen, ungültige Pläne, Kalibrierung, Korrektur, Pausen der isolierten Zeitbasis, GPS-Drift, alte und ungenaue Messpunkte, Sprünge, Messlücken, Geschwindigkeitsglättung und die Fahrt-Serialisierung ab. Die Tests sind angelegt, auf dem Windows-Erstellungsrechner jedoch **nicht ausgeführt**.
+Die 27 XCTest-Fälle decken einzelne und mehrere Sollschnitte, Segmentgrenzen, ungültige Pläne, gewichtete Kalibrierreihen, Rückrechnung von Anzeigen, ungültige Faktoren, Demo-Trennung, unterbrochene Referenzmessungen, Profilmigration und Historie, Korrektur, Zeitbasis, GPS-Drift, alte und ungenaue Messpunkte, Sprünge, Messlücken, Geschwindigkeitsglättung und Fahrt-Serialisierung ab. Am 8. September 2026 wurden **alle 27 Tests mit Swift 6.3.3 unter Ubuntu/WSL2 erfolgreich ausgeführt**. Der vollständige iOS-Build und die Geräteprüfung bleiben offen. Details und Wiederholungsbefehl stehen in `VALIDATION.md`.
 
 `.github/workflows/ios.yml` enthält einen macOS-Job für dieselben Tests und den Simulator-Build. Er läuft nach einem Push in ein GitHub-Repository mit aktivierten Actions. Es wurde kein Repository veröffentlicht und kein CI-Lauf ausgelöst.
 
