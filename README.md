@@ -13,6 +13,8 @@ Native SwiftUI-App für GPS-Tripmaster und Gleichmäßigkeitsprüfungen, ab iOS 
 
 Ein signiertes Installationspaket ist nicht enthalten. Dieses Projekt wurde auf Windows erstellt; dort stehen weder der Apple-SDK-Build noch der iOS-Simulator zur Verfügung. Der tatsächliche iOS-Build und die Geräteprüfung sind noch offen.
 
+**Für TestFlight:** Seit dem 28. April 2026 verlangt Apple für Uploads Xcode 26 oder neuer mit dem iOS-26-SDK oder neuer. Xcode 26 benötigt mindestens macOS Sequoia 15.6. Die oben genannte Xcode-15-Untergrenze betrifft nur den lokalen Projektaufbau, nicht die heutige TestFlight-Veröffentlichung. Quellen: [Apple-Uploadvorgaben](https://developer.apple.com/news/upcoming-requirements/), [Xcode-Systemanforderungen](https://developer.apple.com/xcode/system-requirements).
+
 ## GitHub-Projektseite
 
 `docs/` enthält eine eigenständige, responsive Projektseite mit Funktionsübersicht, Quellcode-Download und Startanleitung. Sie benötigt keine Web-Abhängigkeiten. Die Beispielanzeige ist ausdrücklich als Illustration gekennzeichnet; die native iPhone-App läuft nicht im Browser.
