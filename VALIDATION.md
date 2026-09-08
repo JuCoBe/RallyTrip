@@ -18,7 +18,7 @@ Swiftly liegt im Benutzerverzeichnis von Ubuntu. Die für das Ubuntu-24.04-Toolc
 
 ## Noch offen
 
-- Vollständiger Build mit Xcode und Apple-SDK, einschließlich SwiftUI-Typprüfung.
+- Vollständiger Simulator-Build mit Xcode und Apple-SDK einschließlich SwiftUI-Typprüfung: inzwischen bestanden, ebenso alle 27 Tests auf dem GitHub-Mac. Lauf: https://github.com/JuCoBe/RallyTrip/actions/runs/34208375144
 - Bedienung und Layout im iPhone-Simulator bzw. auf einem iPhone.
 - Reale Kalibrierfahrt mit GPS, Hintergrundbetrieb und Empfangsausfällen.
-- GitHub-Veröffentlichung und TestFlight-Bereitstellung; dafür fehlen weiterhin die entsprechenden Anmeldungen.
+- GitHub-Projekt und Projektseite sind veröffentlicht. TestFlight-Bereitstellung bleibt offen; Apple-Developer-Zugang und Signierung fehlen.
