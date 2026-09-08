@@ -1,5 +1,7 @@
 # RallyTrip für iPhone
 
+RallyTrip wurde mit künstlicher Intelligenz (OpenAI Codex) nach den Vorgaben und im Austausch mit dem Projektinhaber programmiert.
+
 Native SwiftUI-App für GPS-Tripmaster und Gleichmäßigkeitsprüfungen, ab iOS 17. Große Instrumente, deutsche Bedienoberfläche und eine dunkle Gestaltung mit limettengrünen Akzenten. Die App benötigt keine Drittanbieter-Pakete, kein Backend und keinen Account.
 
 ## Projekt auf dem Mac starten
