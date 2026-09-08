@@ -7,7 +7,7 @@ struct RallyTripApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            launchView
                 .environmentObject(session)
                 .tint(session.data.settings.theme == "Nacht" ? .orange :
                       session.data.settings.theme == "Hell" ? Color(red: 0.27, green: 0.38, blue: 0.03) : RallyStyle.lime)
@@ -22,5 +22,20 @@ struct RallyTripApp: App {
                     else { session.updateIdleTimer() }
                 }
         }
+    }
+
+    @ViewBuilder
+    private var launchView: some View {
+        #if DEBUG
+        switch ProcessInfo.processInfo.environment["RALLYTRIP_SCREENSHOT"] {
+        case "tripmaster": NavigationStack { TripmasterView() }
+        case "regularity": NavigationStack { RegularityView() }
+        case "calibration": NavigationStack { CalibrationView() }
+        case "settings": NavigationStack { SettingsView() }
+        default: HomeView()
+        }
+        #else
+        HomeView()
+        #endif
     }
 }

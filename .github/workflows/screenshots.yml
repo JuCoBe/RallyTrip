@@ -1,0 +1,33 @@
+name: iPhone simulator screenshots
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  screenshots:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app
+        run: xcodebuild -project RallyTrip.xcodeproj -scheme RallyTrip -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Capture actual app screens
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(v["udid"] for k,vs in d["devices"].items() if "iOS" in k for v in vs if v["name"].startswith("iPhone")))')
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl status_bar "$DEVICE" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$DEVICE" build/Build/Products/Debug-iphonesimulator/RallyTrip.app
+          xcrun simctl privacy "$DEVICE" grant location de.rallytrip.app
+          mkdir -p screenshots
+          for SCREEN in home tripmaster regularity calibration settings; do
+            SIMCTL_CHILD_RALLYTRIP_SCREENSHOT="$SCREEN" xcrun simctl launch "$DEVICE" de.rallytrip.app
+            sleep 4
+            xcrun simctl io "$DEVICE" screenshot "screenshots/$SCREEN.png"
+            xcrun simctl terminate "$DEVICE" de.rallytrip.app
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RallyTrip-iPhone-screenshots
+          path: screenshots/*.png
