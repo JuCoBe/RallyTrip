@@ -1,0 +1,88 @@
+name: Temporary interactive iPhone simulator
+on: workflow_dispatch
+permissions:
+  contents: read
+concurrency:
+  group: interactive-simulator
+  cancel-in-progress: true
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install testing tools
+        run: |
+          npm install -g appium@3.7.0
+          appium driver install xcuitest@12.11.0
+          brew install cloudflared
+      - name: Build app and boot simulator
+        run: |
+          set -euo pipefail
+          xcodebuild -project RallyTrip.xcodeproj -scheme RallyTrip -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build > build.log 2>&1
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(v["udid"] for k,vs in d["devices"].items() if "iOS" in k for v in vs if v["name"].startswith("iPhone")))')
+          echo "SIMULATOR_UDID=$DEVICE" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl status_bar "$DEVICE" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$DEVICE" build/Build/Products/Debug-iphonesimulator/RallyTrip.app
+          xcrun simctl privacy "$DEVICE" grant location de.rallytrip.app
+      - name: Start authenticated interactive session
+        env:
+          SIMULATOR_ACCESS_TOKEN: ${{ secrets.SIMULATOR_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          test ${#SIMULATOR_ACCESS_TOKEN} -ge 32
+          appium --address 127.0.0.1 --port 4723 --log-level warn > appium.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:4723/status >/dev/null && break || sleep 2; done
+          python3 -u scripts/remote-simulator/server.py > bridge.log 2>&1 &
+          BRIDGE=$!
+          for i in $(seq 1 300); do
+            test -f remote-ready && break
+            kill -0 "$BRIDGE" || { cat bridge.log; exit 1; }
+            sleep 2
+          done
+          test -f remote-ready
+          cloudflared tunnel --url http://127.0.0.1:7999 --no-autoupdate > tunnel.log 2>&1 &
+          TUNNEL=$!
+          trap 'kill "$TUNNEL" "$BRIDGE" 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            URL=$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' tunnel.log | head -1 || true)
+            test -n "$URL" && break
+            sleep 2
+          done
+          test -n "$URL"
+          mkdir -p connection
+          printf '%s\n' "$URL" > connection/url.txt
+          echo "## Interactive simulator ready" >> "$GITHUB_STEP_SUMMARY"
+          echo "Host: $URL (private access key required). Ends automatically after 30 minutes." >> "$GITHUB_STEP_SUMMARY"
+          echo "URL is also stored in the connection artifact once the next step starts."
+          # Upload metadata while the session stays alive; process cleanup occurs in a later step.
+          trap - EXIT
+          echo "BRIDGE_PID=$BRIDGE" >> "$GITHUB_ENV"
+          echo "TUNNEL_PID=$TUNNEL" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simulator-connection
+          path: connection/url.txt
+          retention-days: 1
+      - name: Keep test session available (maximum 30 minutes)
+        run: |
+          for i in $(seq 1 180); do
+            kill -0 "$BRIDGE_PID" 2>/dev/null || break
+            sleep 10
+          done
+          kill "$TUNNEL_PID" "$BRIDGE_PID" 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: simulator-diagnostics
+          path: |
+            build.log
+            appium.log
+            bridge.log
