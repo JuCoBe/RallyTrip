@@ -6,7 +6,7 @@ try {
     foreach ($taskDirectory in @('RallyTrip','RallyTrip.xcodeproj','Sources','Tests','scripts','.github')) {
         Copy-Item -LiteralPath (Join-Path $taskRoot $taskDirectory) -Destination $taskStage -Recurse
     }
-    foreach ($taskFile in @('Package.swift','README.md','VALIDATION.md','.gitignore','.gitattributes')) {
+    foreach ($taskFile in @('Package.swift','README.md','VALIDATION.md','.gitignore','.gitattributes','Simulator-starten.cmd')) {
         Copy-Item -LiteralPath (Join-Path $taskRoot $taskFile) -Destination $taskStage
     }
     $taskDocs = Join-Path $taskStage 'docs'

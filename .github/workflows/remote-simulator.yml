@@ -1,5 +1,12 @@
 name: Temporary interactive iPhone simulator
-on: workflow_dispatch
+run-name: Simulator ${{ inputs.request_id || 'manuell' }}
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Kennung des lokalen Startbefehls
+        required: false
+        type: string
 permissions:
   contents: read
 concurrency:

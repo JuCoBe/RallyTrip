@@ -6,6 +6,14 @@ Native SwiftUI-App für GPS-Tripmaster und Gleichmäßigkeitsprüfungen, ab iOS 
 
 ## Projekt auf dem Mac starten
 
+### Simulator von Windows aus öffnen
+
+Auf dem bereits eingerichteten Windows-PC im Projektordner `Simulator-starten.cmd` doppelklicken oder in PowerShell ` .\Simulator-starten.cmd` ausführen. Der Befehl startet den GitHub-Workflow, wartet auf den Simulator und öffnet die App-Steuerung im Standardbrowser. Der Aufbau kann etwa 10–15 Minuten dauern; danach bleibt die Testsitzung maximal 30 Minuten verfügbar. Ein erneuter Start beendet eine noch laufende Sitzung.
+
+Voraussetzung sind die GitHub-Anmeldung für dieses Repository und der separat lokal hinterlegte Simulator-Zugangsschlüssel, passend zum GitHub Secret `SIMULATOR_ACCESS_TOKEN`. Der Schlüssel ist nicht im Repository enthalten; der Download allein richtet keinen Zugang auf einem anderen PC ein. ` .\Simulator-starten.cmd -CheckOnly` prüft die vorhandene Einrichtung ohne einen Lauf zu starten.
+
+### Lokal mit Xcode
+
 1. Diesen gesamten Ordner auf einen Mac mit Xcode 15 oder neuer kopieren.
 2. **RallyTrip.xcodeproj** in Xcode öffnen. Nicht nur die `Package.swift` öffnen: diese enthält ausschließlich den plattformunabhängigen Rechenkern.
 3. Das Scheme **RallyTrip** und einen iPhone-Simulator auswählen, dann **⌘R**.
