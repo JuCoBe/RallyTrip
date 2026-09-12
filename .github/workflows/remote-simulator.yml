@@ -34,6 +34,8 @@ jobs:
           xcodebuild -project RallyTrip.xcodeproj -scheme RallyTrip -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build > build.log 2>&1
           DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(v["udid"] for k,vs in d["devices"].items() if "iOS" in k for v in vs if v["name"].startswith("iPhone")))')
           echo "SIMULATOR_UDID=$DEVICE" >> "$GITHUB_ENV"
+          VERSION=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); uid=sys.argv[1]; print(next(k.split("iOS-")[1].replace("-", ".") for k,vs in d["devices"].items() if any(v["udid"]==uid for v in vs)))' "$DEVICE")
+          echo "SIMULATOR_VERSION=$VERSION" >> "$GITHUB_ENV"
           xcrun simctl boot "$DEVICE"
           xcrun simctl bootstatus "$DEVICE" -b
           xcrun simctl status_bar "$DEVICE" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
@@ -46,10 +48,10 @@ jobs:
           set -euo pipefail
           test ${#SIMULATOR_ACCESS_TOKEN} -ge 32
           appium --address 127.0.0.1 --port 4723 --log-level warn > appium.log 2>&1 &
-          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:4723/status >/dev/null && break || sleep 2; done
+          for i in $(seq 1 60); do curl --max-time 5 -fsS http://127.0.0.1:4723/status >/dev/null && break || sleep 2; done
           python3 -u scripts/remote-simulator/server.py > bridge.log 2>&1 &
           BRIDGE=$!
-          for i in $(seq 1 300); do
+          for i in $(seq 1 360); do
             test -f remote-ready && break
             kill -0 "$BRIDGE" || { cat bridge.log; exit 1; }
             sleep 2

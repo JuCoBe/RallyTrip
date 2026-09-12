@@ -20,12 +20,12 @@ SESSION = None
 EXPIRES = time.time() + 1800
 
 
-def driver(method, route, body=None):
+def driver(method, route, body=None, timeout=300):
     request = urllib.request.Request(
         "http://127.0.0.1:4723" + route,
         data=None if body is None else json.dumps(body).encode(),
         headers={"Content-Type": "application/json"}, method=method)
-    with urllib.request.urlopen(request, timeout=300) as response:
+    with urllib.request.urlopen(request, timeout=timeout) as response:
         value = json.load(response)["value"]
     if isinstance(value, dict) and "error" in value:
         raise RuntimeError(value["error"])
@@ -41,12 +41,14 @@ def initialize():
     result = driver("POST", "/session", {"capabilities": {"alwaysMatch": {
         "platformName": "iOS", "appium:automationName": "XCUITest",
         "appium:udid": os.environ["SIMULATOR_UDID"],
+        "appium:platformVersion": os.environ["SIMULATOR_VERSION"],
+        "appium:isHeadless": True, "appium:simulatorStartupTimeout": 300000,
         "appium:app": os.path.abspath("build/Build/Products/Debug-iphonesimulator/RallyTrip.app"),
         "appium:bundleId": "de.rallytrip.app", "appium:noReset": True,
         "appium:newCommandTimeout": 1900, "appium:wdaLaunchTimeout": 240000,
         "appium:waitForIdleTimeout": 0.5, "appium:autoAcceptAlerts": True,
         "appium:showXcodeLog": True
-    }}})
+    }}}, timeout=600)
     SESSION = result["sessionId"]
     # A real interaction verifies that the bridge can control, not only view, the app.
     rect = driver("GET", f"/session/{SESSION}/window/rect")
