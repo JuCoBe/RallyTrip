@@ -2,7 +2,26 @@
 
 RallyTrip wurde mit künstlicher Intelligenz (OpenAI Codex) nach den Vorgaben und im Austausch mit dem Projektinhaber programmiert.
 
-Native SwiftUI-App für GPS-Tripmaster und Gleichmäßigkeitsprüfungen, ab iOS 17. Große Instrumente, deutsche Bedienoberfläche und eine dunkle Gestaltung mit limettengrünen Akzenten. Die App benötigt keine Drittanbieter-Pakete, kein Backend und keinen Account.
+Native SwiftUI-App für GPS-Tripmaster und Gleichmäßigkeitsprüfungen, ab iOS 17. Große Instrumente, deutsche Bedienoberfläche, native Tab-Navigation und adaptive helle/dunkle Systemfarben mit grünen Akzenten. Die App benötigt keine Drittanbieter-Pakete, kein Backend und keinen Account.
+
+## Design- und Bedienungsupdate vom 25. September 2026
+
+- **Übersicht, Tripmaster, Regularity und Route** sind über native Tabs erreichbar. Kalibrierung und Einstellungen befinden sich in der Übersicht.
+- **System** folgt der iPhone-Darstellung und ist der Standard für neue Installationen. Bestehende Einstellungen für Hell, Dunkel und Nacht bleiben erhalten.
+- Die Instrumente skalieren mit Dynamic Type; wichtige zweispaltige Bereiche wechseln bei Bedienungshilfen-Schriftgrößen in eine Spalte. Schaltflächen verwenden native Zustände und große Berührungsflächen.
+- **Fokus** im Tripmaster blendet Fahrzeugdetails, Durchschnitt und Korrekturen aus. Total, Trip, GPS-Geschwindigkeit, Roadbook-Hinweis und Fahrtsteuerung bleiben erreichbar. **Alle Details** stellt die vollständige Ansicht wieder her.
+- **Letzten Reset rückgängig** stellt den vorherigen Trip inklusive der seit dem Reset gefahrenen Strecke wieder her. Total und Rohstrecke bleiben unverändert. Es gibt eine Rückgängig-Stufe; eine neue Fahrt beginnt ohne Reset-Historie.
+- **Durchschnitt** berechnet sich aus kalibrierter GPS-Rohstrecke und Fahrtzeit ohne Messpausen. Manuelle Total-Korrekturen ändern ihn nicht; GPS-Lücken können den Wert unterschätzen.
+- Ohne gültigen GPS-Empfang zeigt die Geschwindigkeit **—**. Während einer Prüfung ersetzt **GPS prüfen** bzw. **Streckenmessung pausiert** die Live-Abweichung. Die Prüfungsuhr läuft weiter.
+- Vorübergehende GPS-Fehler setzen die Standortfreigabe nicht mehr fälschlich auf ungenau. Nach dem Speichern wird keine veraltete GPS-Verlustmeldung mehr erzeugt. Löschen gespeicherter Fahrten erfordert eine Bestätigung.
+
+Recherche, Quellen und Produktentscheidungen: [MARKET-RESEARCH.md](MARKET-RESEARCH.md). Prüfungen und noch offene iPhone-Abnahme: [VALIDATION.md](VALIDATION.md).
+
+## Weitere Plattformen – Entwicklungsstand
+
+`RallyWatch/` enthält eine Apple-Watch-Begleit-App mit Anzeige und Fernbedienung der iPhone-Sitzung. Das Xcode-Projekt enthält das Watch-Target und bettet die Begleit-App ein. Ein erfolgreicher watchOS-Build und Tests mit gekoppelten Geräten stehen für diesen Stand noch aus.
+
+Unter `android/` entsteht eine Android-Version. Die Dateien sind ein Entwicklungsstand; ein lauffähiges, geprüftes Android-Paket wird damit noch nicht zugesichert.
 
 ## Projekt auf dem Mac starten
 
@@ -33,7 +52,7 @@ Lokal ansehen: `node scripts/preview-site.mjs`, anschließend `http://127.0.0.1:
 
 Zum Veröffentlichen die Projektdateien in das gewünschte GitHub-Repository hochladen und dort unter **Settings → Pages → Build and deployment → Source** die Option **GitHub Actions** auswählen. Der Workflow `.github/workflows/pages.yml` veröffentlicht `docs/` bei Änderungen auf `main` oder `master`; er kann auch manuell gestartet werden. Der tatsächliche Seitenlink erscheint nach erfolgreichem Lauf in der GitHub-Pages-Umgebung des Repositorys.
 
-Die Website verwendet relative Links und funktioniert deshalb auch unter einem Repository-Unterpfad. `pwsh -File scripts/package-project.ps1` erzeugt das aktuelle Downloadpaket und aktualisiert `docs/downloads/RallyTrip-iOS.zip`. Die ZIP enthält sich selbst nicht; nach dem Entpacken kann dieser Befehl den Website-Download wiederherstellen. Eine GitHub-Veröffentlichung ist noch nicht erfolgt.
+Die Website verwendet relative Links und funktioniert deshalb auch unter einem Repository-Unterpfad. `pwsh -File scripts/package-project.ps1` erzeugt das aktuelle Downloadpaket und aktualisiert `docs/downloads/RallyTrip-iOS.zip`. Die ZIP enthält sich selbst nicht; nach dem Entpacken kann dieser Befehl den Website-Download wiederherstellen. Das Repository ist unter https://github.com/JuCoBe/RallyTrip veröffentlicht; die Projektseite unter https://jucobe.github.io/RallyTrip/.
 
 ## Umgesetzter Funktionsumfang
 
@@ -47,7 +66,7 @@ Die Website verwendet relative Links und funktioniert deshalb auch unter einem R
 | Kalibrierung | Live-Referenzstrecken, gewichtete Messreihen, Rückrechnung bereits kalibrierter Anzeigen, direkter Faktor, Fahrzeugprofile und Kalibrierhistorie |
 | Route | MapKit-Karte, getrennte Streckenlinien bei Messlücken und Pausen, manuell angelegte Roadbook-Punkte |
 | Fahrten | Lokales JSON-Archiv, Wiederherstellung des letzten Zwischenspeicherstands, GPX-Export und Löschen |
-| Darstellung | Hell, Dunkel, Nacht; Bildschirm während der Fahrt wach halten |
+| Darstellung | System, Hell, Dunkel, Nacht; Dynamic Type, Fokusmodus; Bildschirm während der Fahrt wach halten |
 | Demo | Simulierte Positionspunkte auf einer Kreisstrecke, explizite Kennzeichnung der Demo-Fahrten |
 
 OBD, externe GNSS-Empfänger, Sensorfusion, Roadbook-Dateiimport und eine errechnete Aufholgeschwindigkeit sind nicht Teil dieser Version. Die `PositionSource`-Schnittstelle ist der Einstiegspunkt für spätere Messquellen. Das Roadbook ist eine manuelle Kilometer-/Hinweisliste, keine Abbiegenavigation.
@@ -102,14 +121,14 @@ Auf einem Mac im Projektordner:
 ```sh
 swift test
 xcodebuild -project RallyTrip.xcodeproj -scheme RallyTrip \
-  -configuration Debug -sdk iphonesimulator \
+  -configuration Debug \
   -destination 'generic/platform=iOS Simulator' \
   CODE_SIGNING_ALLOWED=NO build
 ```
 
-Die 27 XCTest-Fälle decken einzelne und mehrere Sollschnitte, Segmentgrenzen, ungültige Pläne, gewichtete Kalibrierreihen, Rückrechnung von Anzeigen, ungültige Faktoren, Demo-Trennung, unterbrochene Referenzmessungen, Profilmigration und Historie, Korrektur, Zeitbasis, GPS-Drift, alte und ungenaue Messpunkte, Sprünge, Messlücken, Geschwindigkeitsglättung und Fahrt-Serialisierung ab. Am 8. September 2026 wurden **alle 27 Tests mit Swift 6.3.3 unter Ubuntu/WSL2 erfolgreich ausgeführt**. Der vollständige iOS-Build und die Geräteprüfung bleiben offen. Details und Wiederholungsbefehl stehen in `VALIDATION.md`.
+Am 25. September 2026 wurden **30 XCTest-Fälle mit Swift 6.3.3 unter Ubuntu/WSL2 erfolgreich ausgeführt**. Sie prüfen Regularity, Kalibrierung, GPS-Filter, Streckenkorrekturen, Reset-Rücknahme und Speicherung. Der Apple-SDK-Build und die Geräteprüfung für den aktuellen Stand stehen noch aus. Details und Wiederholungsbefehl stehen in `VALIDATION.md`.
 
-`.github/workflows/ios.yml` enthält einen macOS-Job für dieselben Tests und den Simulator-Build. Er läuft nach einem Push in ein GitHub-Repository mit aktivierten Actions. Es wurde kein Repository veröffentlicht und kein CI-Lauf ausgelöst.
+`.github/workflows/ios.yml` enthält einen macOS-Job für dieselben Tests und den Simulator-Build. Er läuft nach einem Push in ein GitHub-Repository mit aktivierten Actions. Das Repository ist veröffentlicht. Frühere erfolgreiche CI-Läufe sind in `VALIDATION.md` dokumentiert; sie bestätigen nicht automatisch den aktuellen Stand.
 
 Lokal ausgeführte Strukturprüfung:
 

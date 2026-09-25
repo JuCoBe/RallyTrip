@@ -3,10 +3,10 @@ $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskStage = Join-Path ([System.IO.Path]::GetTempPath()) ('RallyTrip-package-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $taskStage | Out-Null
 try {
-    foreach ($taskDirectory in @('RallyTrip','RallyTrip.xcodeproj','Sources','Tests','scripts','.github')) {
+    foreach ($taskDirectory in @('RallyTrip','RallyWatch','RallyTrip.xcodeproj','Sources','Tests','scripts','.github')) {
         Copy-Item -LiteralPath (Join-Path $taskRoot $taskDirectory) -Destination $taskStage -Recurse
     }
-    foreach ($taskFile in @('Package.swift','README.md','VALIDATION.md','.gitignore','.gitattributes','Simulator-starten.cmd')) {
+    foreach ($taskFile in @('Package.swift','README.md','VALIDATION.md','MARKET-RESEARCH.md','WATCH.md','.gitignore','.gitattributes','Simulator-starten.cmd')) {
         Copy-Item -LiteralPath (Join-Path $taskRoot $taskFile) -Destination $taskStage
     }
     $taskDocs = Join-Path $taskStage 'docs'

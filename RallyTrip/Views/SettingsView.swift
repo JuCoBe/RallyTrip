@@ -6,6 +6,7 @@ struct SettingsView: View {
         Form {
             Section("Display") {
                 Picker("Darstellung", selection: $session.data.settings.theme) {
+                    Text("System").tag("System")
                     Text("Hell").tag("Hell")
                     Text("Dunkel").tag("Dunkel")
                     Text("Nacht").tag("Nacht")

@@ -59,6 +59,8 @@ public struct TripMeter {
     public private(set) var total = 0.0
     public private(set) var trip = 0.0
     public private(set) var raw = 0.0
+    private var tripBeforeReset: Double?
+    public var canUndoTripReset: Bool { tripBeforeReset != nil }
     public init() {}
     public mutating func add(rawMeters: Double, factor: Double) {
         guard rawMeters.isFinite, rawMeters >= 0, factor.isFinite, factor > 0 else { return }
@@ -74,5 +76,15 @@ public struct TripMeter {
         guard meters.isFinite, meters >= 0 else { return }
         total = meters
     }
-    public mutating func resetTrip() { trip = 0 }
+    public mutating func resetTrip() {
+        guard trip > 0 else { return }
+        tripBeforeReset = trip
+        trip = 0
+    }
+    public mutating func undoTripReset() {
+        guard let previous = tripBeforeReset else { return }
+        // Keep distance measured after the reset; never restore an old snapshot.
+        trip += previous
+        tripBeforeReset = nil
+    }
 }

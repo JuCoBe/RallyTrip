@@ -15,9 +15,7 @@ struct CalibrationView: View {
             Section {
                 VStack(alignment: .leading, spacing: 12) {
                     Eyebrow(text: "AKTIVER KALIBRIERFAKTOR")
-                    Text(RallyFormat.decimal(session.factor, digits: 5))
-                        .font(.system(size: 46, weight: .semibold, design: .monospaced))
-                        .minimumScaleFactor(0.5).lineLimit(1)
+                    MeterValue(RallyFormat.decimal(session.factor, digits: 5), size: 46)
                     Text(session.data.settings.profile.name).foregroundStyle(.secondary)
                 }.padding(.vertical, 8)
                 Text("Messstrecke × Faktor = Rallyestrecke. Änderungen gelten ab der nächsten Fahrt.")

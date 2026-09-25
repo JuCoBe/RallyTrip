@@ -75,6 +75,11 @@ final class LocationEngine: NSObject, PositionSource, CLLocationManagerDelegate 
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        onStatus?("GPS: \(error.localizedDescription)", false)
+        guard requested else { return }
+        // A transient receiver error does not revoke the precise-location permission.
+        // Otherwise RallySession rejects every future fix until authorization changes.
+        let authorized = manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .authorizedWhenInUse
+        let precise = authorized && manager.accuracyAuthorization == .fullAccuracy
+        onStatus?("GPS: \(error.localizedDescription)", precise)
     }
 }

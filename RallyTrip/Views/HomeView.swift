@@ -2,97 +2,111 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var session: RallySession
+    @State private var selection = Destination.overview
+
+    private enum Destination: Hashable {
+        case overview, tripmaster, regularity, route
+    }
+
+    init(initialTab: String? = nil) {
+        let destination: Destination
+        switch initialTab {
+        case "tripmaster": destination = .tripmaster
+        case "regularity": destination = .regularity
+        case "route": destination = .route
+        default: destination = .overview
+        }
+        _selection = State(initialValue: destination)
+    }
+
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    HStack {
-                        Label("RALLYTRIP", systemImage: "flag.checkered")
-                            .font(.system(.headline, design: .monospaced)).tracking(3)
-                        Spacer()
-                        Text("V1.0").font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary)
-                    }.padding(.top, 8)
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Jeder Meter.\nJede Sekunde.")
-                                .font(.system(size: 37, weight: .bold, design: .rounded)).tracking(-1.5)
-                            Text("Dein digitaler Rallye-Tripmaster.")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                        }
-                        Spacer(minLength: 0)
-                    }
-
-                    NavigationLink { TripmasterView() } label: {
-                        Panel(accent: true) {
-                            VStack(alignment: .leading, spacing: 28) {
-                                HStack {
-                                    Eyebrow(text: "01 / TRIPMASTER")
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right").font(.title2)
-                                }
-                                Instrument(label: session.busy ? "TOTAL · LIVE" : "BEREIT FÜR DIE NÄCHSTE ETAPPE",
-                                           value: RallyFormat.distance(session.meter.total), unit: "km", size: 64)
-                                HStack {
-                                    Label(session.state.rawValue, systemImage: session.busy ? "record.circle" : "location.north.circle")
-                                    Spacer()
-                                    Text(session.data.settings.profile.name).lineLimit(1)
-                                }.font(.system(.caption, design: .monospaced))
-                            }
-                        }
-                    }.buttonStyle(.plain)
-
-                    VStack(spacing: 10) {
-                        NavigationLink { RegularityView() } label: {
-                            MenuRow(number: "02", title: "Regularity", subtitle: "Sollschnitt. Timing. Präzision.", icon: "stopwatch")
-                        }
-                        NavigationLink { RouteView() } label: {
-                            MenuRow(number: "03", title: "Route / Roadbook", subtitle: "Deine Strecke im Blick", icon: "point.topleft.down.to.point.bottomright.curvepath")
-                        }
-                        NavigationLink { CalibrationView() } label: {
-                            MenuRow(number: "04", title: "Kalibrierung", subtitle: "Auf dein Fahrzeug abgestimmt", icon: "slider.horizontal.3")
-                        }
-                        NavigationLink { SettingsView() } label: {
-                            MenuRow(number: "05", title: "Einstellungen", subtitle: "Display, Signale & Daten", icon: "gearshape")
-                        }
-                    }.buttonStyle(.plain)
-
-                    if let notice = session.notice {
-                        HStack(alignment: .top) {
-                            Image(systemName: "checkmark.circle")
-                            Text(notice).font(.caption)
-                            Spacer()
-                            Button { session.notice = nil } label: { Image(systemName: "xmark") }
-                                .accessibilityLabel("Hinweis schließen")
-                        }.foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Label(session.isDemo ? "DEMO-MODUS" : "IPHONE GPS", systemImage: "location.circle")
-                        Spacer()
-                        Text("FAKTOR \(RallyFormat.decimal(session.factor, digits: 5))")
-                    }.font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(.secondary)
-                }.padding(20)
-            }.background(RallyStyle.background)
-                .toolbar(.hidden, for: .navigationBar)
+        TabView(selection: $selection) {
+            NavigationStack { overview }
+                .tabItem { Label("Übersicht", systemImage: "square.grid.2x2") }
+                .tag(Destination.overview)
+            NavigationStack { TripmasterView() }
+                .tabItem { Label("Tripmaster", systemImage: "speedometer") }
+                .tag(Destination.tripmaster)
+            NavigationStack { RegularityView() }
+                .tabItem { Label("Regularity", systemImage: "stopwatch") }
+                .tag(Destination.regularity)
+            NavigationStack { RouteView() }
+                .tabItem { Label("Route", systemImage: "map") }
+                .tag(Destination.route)
         }
     }
-}
 
-private struct MenuRow: View {
-    var number: String
-    var title: String
-    var subtitle: String
-    var icon: String
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon).font(.system(size: 24, weight: .light)).frame(width: 32)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(.system(.headline, design: .rounded))
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+    private var overview: some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 16) {
+                    Label(session.state.rawValue, systemImage: session.busy ? "record.circle" : "flag.checkered")
+                        .font(.headline).foregroundStyle(.tint)
+                    Instrument(label: "Gesamtstrecke", value: RallyFormat.distance(session.meter.total), unit: "km", size: 56)
+                    GPSStatus()
+                    ActionButton(title: session.busy ? "Zur laufenden Fahrt" : "Tripmaster öffnen",
+                                 icon: "speedometer", prominent: true) { selection = .tripmaster }
+                }.padding(.vertical, 8)
+            } header: { Text("Deine Fahrt") }
+
+            if session.isDemo {
+                Section {
+                    Label {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Demo-Modus aktiv").font(.headline)
+                            Text("Die angezeigte Fahrt ist simuliert.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    } icon: { Image(systemName: "testtube.2").foregroundStyle(.tint) }
+                }
             }
-            Spacer()
-            Text(number).font(.system(.caption2, design: .monospaced)).foregroundStyle(.tertiary)
-            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
-        }.padding(18).background(RallyStyle.panel, in: RoundedRectangle(cornerRadius: 20))
-            .foregroundStyle(.primary)
+
+            Section("Vorbereitung") {
+                NavigationLink { CalibrationView() } label: {
+                    overviewLabel("Kalibrierung", subtitle: session.data.settings.profile.name, icon: "slider.horizontal.3")
+                }
+                Button { selection = .regularity } label: {
+                    overviewLabel("Wertungsprüfung", subtitle: "Schnittplan und Startzeit", icon: "stopwatch")
+                }.foregroundStyle(.primary)
+                Button { selection = .route } label: {
+                    overviewLabel("Route und Fahrten", subtitle: "Roadbook, Strecken und GPX-Export", icon: "map")
+                }.foregroundStyle(.primary)
+            }
+
+            Section("Fahrzeug") {
+                LabeledContent("Profil", value: session.data.settings.profile.name)
+                LabeledContent("Kalibrierfaktor", value: RallyFormat.decimal(session.factor, digits: 5))
+            }
+
+            if let notice = session.notice {
+                Section {
+                    HStack(alignment: .top, spacing: 12) {
+                        Label(notice, systemImage: "checkmark.circle")
+                            .font(.subheadline).frame(maxWidth: .infinity, alignment: .leading)
+                        Button { session.notice = nil } label: {
+                            Image(systemName: "xmark").frame(width: 44, height: 44)
+                        }.buttonStyle(.borderless).accessibilityLabel("Hinweis schließen")
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("RallyTrip")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { SettingsView() } label: {
+                    Image(systemName: "gearshape").frame(minWidth: 44, minHeight: 44)
+                }.accessibilityLabel("Einstellungen")
+            }
+        }
+    }
+
+    private func overviewLabel(_ title: String, subtitle: String, icon: String) -> some View {
+        Label {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline)
+                Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
+            }.padding(.vertical, 6)
+        } icon: { Image(systemName: icon).foregroundStyle(.tint) }
     }
 }

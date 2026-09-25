@@ -75,4 +75,45 @@ final class DistanceEngineTests: XCTestCase {
         XCTAssertLessThan(fast.displaySpeedKPH, 72)
         XCTAssertGreaterThan(fast.displaySpeedKPH, 36)
     }
+
+    func testUndoTripResetPreservesDistanceDrivenSinceResetAndCorrections() {
+        var meter = TripMeter()
+        meter.add(rawMeters: 1000, factor: 1.1)
+        meter.resetTrip()
+        meter.add(rawMeters: 100, factor: 1.1)
+        meter.correctTotal(by: -50)
+        meter.undoTripReset()
+        XCTAssertEqual(meter.trip, 1210, accuracy: 0.001)
+        XCTAssertEqual(meter.total, 1160, accuracy: 0.001)
+        XCTAssertEqual(meter.raw, 1100, accuracy: 0.001)
+        XCTAssertFalse(meter.canUndoTripReset)
+        meter.undoTripReset()
+        XCTAssertEqual(meter.trip, 1210, accuracy: 0.001)
+    }
+
+    func testDoubleTapResetRetainsUndoAndNewRideHasNoUndo() {
+        var meter = TripMeter()
+        meter.add(rawMeters: 500, factor: 1)
+        meter.resetTrip()
+        meter.resetTrip()
+        XCTAssertTrue(meter.canUndoTripReset)
+        meter.undoTripReset()
+        XCTAssertEqual(meter.trip, 500)
+        meter = TripMeter()
+        XCTAssertFalse(meter.canUndoTripReset)
+        meter.undoTripReset()
+        XCTAssertEqual(meter.trip, 0)
+    }
+
+    func testUndoRestoresOnlyTheMostRecentReset() {
+        var meter = TripMeter()
+        meter.add(rawMeters: 500, factor: 1)
+        meter.resetTrip()
+        meter.add(rawMeters: 100, factor: 1)
+        meter.resetTrip()
+        meter.add(rawMeters: 20, factor: 1)
+        meter.undoTripReset()
+        XCTAssertEqual(meter.trip, 120)
+        XCTAssertEqual(meter.total, 620)
+    }
 }

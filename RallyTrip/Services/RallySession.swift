@@ -3,7 +3,7 @@ import Combine
 import AVFoundation
 
 enum SessionState: String {
-    case ready = "BEREIT", scheduled = "START GEPLANT", running = "AUFZEICHNUNG", paused = "PAUSIERT"
+    case ready = "Bereit", scheduled = "Start geplant", running = "Aufzeichnung", paused = "Pausiert"
 }
 
 @MainActor
@@ -48,6 +48,9 @@ final class RallySession: ObservableObject {
     private var demoMeters = 0.0
     private var lastCheckpoint = 0.0
     private var storageReadable = true
+    private let watchBridge = PhoneWatchBridge()
+    private var watchSessionID = UUID()
+    private var watchReceipts = WatchCommandReceipts()
 
     var now: Double {
         let duration = epoch.duration(to: monotonic.now).components
@@ -56,6 +59,8 @@ final class RallySession: ObservableObject {
     var busy: Bool { state != .ready }
     var canConfigure: Bool { state == .ready && !stageActive }
     var factor: Double { busy ? rideFactor : data.settings.profile.factor }
+    // Manual roadbook corrections must not change the measured average speed.
+    var averageSpeed: Double { elapsed > 0 ? meter.raw * rideFactor / elapsed * 3.6 : 0 }
     var result: RegularityResult {
         // Validated on editing and loading; keep a safe default for a damaged file.
         let engine = (try? RegularityEngine(segments: stageActive ? rideSegments : data.settings.segments))
@@ -82,12 +87,64 @@ final class RallySession: ObservableObject {
         }
         location.onPoint = { [weak self] point in self?.receive(point) }
         location.onStatus = { [weak self] message, precise in
-            self?.gpsStatus = message; self?.fullAccuracy = precise
+            guard let self else { return }
+            self.fullAccuracy = precise
+            guard !self.isDemo, self.state != .paused else { return }
+            self.gpsStatus = message
+            self.speed = 0; self.accuracy = nil; self.lastGoodFix = nil
+            self.filter.resetAnchor()
+            if self.calibrationCapture?.hasFix == true { self.calibrationCapture?.markInterrupted() }
         }
         timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect().sink { [weak self] _ in
             self?.tick()
         }
         recoverCheckpoint()
+        watchBridge.snapshot = { [weak self] in self?.watchSnapshot ?? WatchSnapshot(sessionID: UUID(), state: .ready) }
+        watchBridge.refresh = { [weak self] in self?.tick() }
+        watchBridge.perform = { [weak self] command in
+            guard let self else {
+                return WatchReply(commandID: command.id, accepted: false, message: "iPhone-App nicht bereit.",
+                                  snapshot: WatchSnapshot(sessionID: UUID(), state: .ready))
+            }
+            return self.performWatchCommand(command)
+        }
+        watchBridge.activate()
+    }
+
+    private var watchSnapshot: WatchSnapshot {
+        let watchState: WatchRideState
+        switch state {
+        case .ready: watchState = .ready
+        case .scheduled: watchState = .scheduled
+        case .running: watchState = .running
+        case .paused: watchState = .paused
+        }
+        return WatchSnapshot(sessionID: watchSessionID, state: watchState,
+            stageActive: stageActive, calibrationActive: calibrationCapture != nil,
+            totalMeters: meter.total, tripMeters: meter.trip,
+            deviationSeconds: stageActive && accuracy != nil && state != .paused ? result.deviation : nil,
+            countdown: countdown, stageName: stageName, gpsStatus: gpsStatus, isDemo: isDemo)
+    }
+
+    private func performWatchCommand(_ command: WatchCommand) -> WatchReply {
+        if let cached = watchReceipts.reply(for: command.id) { return cached }
+        // Recheck on the iPhone: the watch may still display a previous state.
+        tick()
+        let rejection = command.rejection(for: watchSnapshot)
+        var message = rejection ?? "Ausgeführt"
+        if rejection == nil {
+            switch command.action {
+            case .startTrip: startTrip(); message = "Fahrt gestartet"
+            case .startStage: startStage(); message = "WP gestartet"
+            case .correctTotal:
+                correctTotal(command.correctionMeters)
+                message = "Total korrigiert"
+            }
+            checkpoint()
+        }
+        let reply = WatchReply(commandID: command.id, accepted: rejection == nil, message: message, snapshot: watchSnapshot)
+        watchReceipts.remember(reply)
+        return reply
     }
 
     func persist() {
@@ -112,6 +169,7 @@ final class RallySession: ObservableObject {
 
     func startTrip() {
         guard state == .ready else { return }
+        watchSessionID = UUID()
         meter = TripMeter(); paths = []; filter.resetAnchor()
         elapsed = 0; stageElapsed = 0; stageDistance = 0
         stageClock.reset()
@@ -175,12 +233,14 @@ final class RallySession: ObservableObject {
             tripClock.resume(at: now)
             filter.resetAnchor(); acceptedAfter = Date(); demoLastTick = now
             state = .running
+            gpsStatus = isDemo ? "Demo · simuliertes GPS" : "GPS wird gesucht"
             if !isDemo { location.start() }
         }
         updateIdleTimer(); feedback(); checkpoint()
     }
 
     func resetTrip() { meter.resetTrip(); feedback() }
+    func undoTripReset() { meter.undoTripReset(); feedback() }
     func correctTotal(_ delta: Double) {
         meter.correctTotal(by: delta)
         updateStageDistance(); feedback()
@@ -204,10 +264,11 @@ final class RallySession: ObservableObject {
         do { try RallyStore.save(next) }
         catch { errorMessage = "Fahrt nicht gespeichert: \(error.localizedDescription)"; return }
         data = next
+        watchSessionID = UUID()
         calibrationCapture?.markInterrupted()
         location.stop(); tripClock.pause(at: now); stageClock.pause(at: now)
         state = .ready; stageActive = false; deadline = nil; countdown = nil
-        speed = 0; gpsStatus = "Fahrt gespeichert"; accuracy = nil
+        speed = 0; gpsStatus = "Fahrt gespeichert"; accuracy = nil; lastGoodFix = nil
         try? FileManager.default.removeItem(at: checkpointURL)
         updateIdleTimer(); feedback()
         notice = "Fahrt gespeichert. Du findest sie unter Route / Roadbook."
@@ -245,6 +306,7 @@ final class RallySession: ObservableObject {
     }
 
     private func tick() {
+        defer { watchBridge.publish() }
         let instant = now
         if let deadline {
             countdown = max(0, deadline - instant)
@@ -264,7 +326,7 @@ final class RallySession: ObservableObject {
                                  speedMPS: kph / 3.6, accuracy: 3))
             }
         }
-        if !isDemo, let fix = lastGoodFix, Date().timeIntervalSince(fix) > 5, state != .paused {
+        if busy, !isDemo, let fix = lastGoodFix, Date().timeIntervalSince(fix) > 5, state != .paused {
             if calibrationCapture?.hasFix == true { calibrationCapture?.markInterrupted() }
             speed = 0; accuracy = nil; gpsStatus = "GPS-Signal verloren · Messung unterbrochen"
         }
@@ -288,7 +350,7 @@ final class RallySession: ObservableObject {
         guard let sample = filter.ingest(point) else {
             if calibrationCapture?.hasFix == true { calibrationCapture?.markInterrupted() }
             if point.accuracy > 20 {
-                accuracy = nil; gpsStatus = "GPS zu ungenau · Messung unterbrochen"
+                speed = 0; accuracy = nil; gpsStatus = "GPS zu ungenau · Messung unterbrochen"
             }
             return
         }

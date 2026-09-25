@@ -1,7 +1,7 @@
 import Foundation
 
 struct AppSettings: Codable {
-    var theme = "Dunkel"
+    var theme = "System"
     var sound = true
     var haptics = true
     var keepAwake = true

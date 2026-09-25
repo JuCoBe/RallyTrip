@@ -1,9 +1,13 @@
 import SwiftUI
 
 enum RallyStyle {
-    static let lime = Color(red: 0.79, green: 0.96, blue: 0.28)
-    static let background = Color(uiColor: .systemBackground)
-    static let panel = Color(uiColor: .secondarySystemBackground)
+    static let accent = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.70, green: 0.88, blue: 0.35, alpha: 1)
+            : UIColor(red: 0.22, green: 0.36, blue: 0.08, alpha: 1)
+    })
+    static let background = Color(uiColor: .systemGroupedBackground)
+    static let panel = Color(uiColor: .secondarySystemGroupedBackground)
 }
 
 enum RallyFormat {
@@ -26,21 +30,57 @@ enum RallyFormat {
 }
 
 struct Panel<Content: View>: View {
-    @EnvironmentObject private var session: RallySession
     var accent = false
+    var inset: CGFloat = 20
     @ViewBuilder var content: Content
     var body: some View {
-        content.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-            .background(accent ? (session.data.settings.theme == "Nacht" ? Color(red: 0.65, green: 0.23, blue: 0.08) : RallyStyle.lime) : RallyStyle.panel, in: RoundedRectangle(cornerRadius: 24))
-            .foregroundStyle(accent ? Color.black : Color.primary)
+        content.padding(inset).frame(maxWidth: .infinity, alignment: .leading)
+            .background(RallyStyle.panel, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(alignment: .leading) {
+                if accent {
+                    Capsule().fill(.tint).frame(width: 4)
+                        .padding(.vertical, 22).accessibilityHidden(true)
+                }
+            }
+            .foregroundStyle(.primary)
     }
 }
 
 struct Eyebrow: View {
     var text: String
     var body: some View {
-        Text(text).font(.system(size: 11, weight: .bold, design: .monospaced))
-            .tracking(2).foregroundStyle(.secondary)
+        Text(text).font(.subheadline.weight(.medium))
+            .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Instruments scale with the system text size and use stable digit widths.
+struct MeterValue: View {
+    var value: String
+    @ScaledMetric(relativeTo: .largeTitle) private var pointSize: CGFloat
+
+    init(_ value: String, size: CGFloat = 66) {
+        self.value = value
+        _pointSize = ScaledMetric(wrappedValue: size, relativeTo: .largeTitle)
+    }
+
+    var body: some View {
+        Text(value).font(.system(size: pointSize, weight: .semibold, design: .rounded))
+            .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+    }
+}
+
+/// Give accessibility text full-width columns instead of squeezing controls.
+struct AdaptiveRow<Content: View>: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    var spacing: CGFloat = 12
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: spacing))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: spacing))
+        layout { content }
     }
 }
 
@@ -53,42 +93,48 @@ struct Instrument: View {
         VStack(alignment: .leading, spacing: 12) {
             Eyebrow(text: label)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(value).font(.system(size: size, weight: .semibold, design: .monospaced))
-                    .tracking(-3).minimumScaleFactor(0.35).lineLimit(1)
-                    .contentTransition(.numericText())
-                Text(unit).font(.system(.subheadline, design: .monospaced)).foregroundStyle(.secondary)
+                MeterValue(value, size: size)
+                Text(unit).font(.subheadline).foregroundStyle(.secondary).fixedSize()
             }
         }.accessibilityElement(children: .combine)
     }
 }
 
 struct ActionButton: View {
-    @EnvironmentObject private var session: RallySession
+    @Environment(\.colorScheme) private var colorScheme
     var title: String
     var icon: String
     var prominent = false
     var action: () -> Void
     var body: some View {
+        if prominent {
+            button.buttonStyle(.borderedProminent)
+                .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
+        } else {
+            button.buttonStyle(.bordered)
+        }
+    }
+
+    private var button: some View {
         Button(action: action) {
-            Label(title, systemImage: icon).font(.system(.subheadline, design: .rounded, weight: .bold))
-                .frame(maxWidth: .infinity, minHeight: 54)
-                .background(prominent ? (session.data.settings.theme == "Nacht" ? Color.orange : RallyStyle.lime) : RallyStyle.panel, in: RoundedRectangle(cornerRadius: 16))
-                .foregroundStyle(prominent ? Color.black : Color.primary)
-        }.buttonStyle(.plain)
+            Label(title, systemImage: icon).font(.headline)
+                .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }.controlSize(.large).buttonBorderShape(.roundedRectangle(radius: 16))
     }
 }
 
 struct GPSStatus: View {
     @EnvironmentObject private var session: RallySession
     var body: some View {
-        HStack(spacing: 8) {
-            Circle().fill(session.accuracy == nil ? Color.orange : Color.green).frame(width: 7, height: 7)
-            Text(session.gpsStatus).font(.caption)
-            Spacer(minLength: 0)
+        AdaptiveRow(spacing: 8) {
+            Label(session.gpsStatus, systemImage: session.accuracy == nil ? "location.slash" : "location.fill")
+                .frame(maxWidth: .infinity, alignment: .leading)
             if let accuracy = session.accuracy {
-                Text("± \(Int(accuracy)) m").font(.system(.caption, design: .monospaced))
+                Text("± \(Int(accuracy)) m").monospacedDigit()
+                    .accessibilityLabel("GPS-Genauigkeit plus minus \(Int(accuracy)) Meter")
             }
-        }.foregroundStyle(.secondary).accessibilityElement(children: .combine)
+        }.font(.subheadline).foregroundStyle(.secondary).accessibilityElement(children: .combine)
     }
 }
 
@@ -100,16 +146,16 @@ struct SessionControls: View {
             if session.state == .ready {
                 ActionButton(title: "Fahrt starten", icon: "play.fill", prominent: true) { session.startTrip() }
             } else {
-                HStack(spacing: 12) {
+                AdaptiveRow {
                     if session.state == .scheduled {
                         ActionButton(title: "Start abbrechen", icon: "xmark") { session.cancelScheduledStart() }
                     } else {
                         ActionButton(title: session.state == .paused ? "Fortsetzen" : "Pause",
-                                     icon: session.state == .paused ? "play.fill" : "pause.fill") {
+                                     icon: session.state == .paused ? "play.fill" : "pause.fill", prominent: true) {
                             session.pauseOrResume()
                         }
                     }
-                    ActionButton(title: "Beenden", icon: "stop.fill", prominent: true) { confirmFinish = true }
+                    ActionButton(title: "Beenden", icon: "stop.fill") { confirmFinish = true }
                 }
                 if session.state == .paused && session.stageActive {
                     Text("Streckenmessung pausiert. Die Prüfungszeit läuft weiter.")
@@ -129,13 +175,14 @@ struct NumericField: View {
     @Binding var value: String
     var unit: String
     var body: some View {
-        HStack {
-            Text(label)
-            Spacer()
-            TextField("0,000", text: $value).keyboardType(.decimalPad)
-                .multilineTextAlignment(.trailing).frame(maxWidth: 130)
-                .accessibilityLabel(label)
-            Text(unit).foregroundStyle(.secondary)
+        AdaptiveRow {
+            Text(label).frame(maxWidth: .infinity, alignment: .leading)
+            HStack {
+                TextField("0,000", text: $value).keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing).frame(minWidth: 100, minHeight: 44)
+                    .accessibilityLabel("\(label), \(unit)")
+                Text(unit).foregroundStyle(.secondary).fixedSize()
+            }
         }
     }
 }

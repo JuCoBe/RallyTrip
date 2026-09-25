@@ -35,6 +35,8 @@ struct TrackMap: View {
 struct RouteView: View {
     @EnvironmentObject private var session: RallySession
     @State private var showRoadbook = false
+    @State private var ridesToDelete: Set<UUID> = []
+    @State private var confirmDelete = false
     var body: some View {
         List {
             Section {
@@ -77,11 +79,24 @@ struct RouteView: View {
                                 .font(.system(.subheadline, design: .monospaced))
                         }.padding(.vertical, 4)
                     }
-                }.onDelete(perform: session.deleteRides)
+                }.onDelete { offsets in
+                    ridesToDelete = Set(offsets.map { session.data.rides[$0].id })
+                    confirmDelete = true
+                }
             }
         }.navigationTitle("Route / Roadbook").navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
             .sheet(isPresented: $showRoadbook) { RoadbookEditor() }
+            .confirmationDialog("Ausgewählte Fahrten endgültig löschen?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button("Fahrten löschen", role: .destructive) {
+                    let offsets = IndexSet(session.data.rides.indices.filter { ridesToDelete.contains(session.data.rides[$0].id) })
+                    session.deleteRides(at: offsets)
+                    ridesToDelete = []
+                }
+                Button("Abbrechen", role: .cancel) { ridesToDelete = [] }
+            } message: {
+                Text("Die gespeicherten GPS-Strecken dieser Fahrten werden ebenfalls gelöscht.")
+            }
     }
 }
 

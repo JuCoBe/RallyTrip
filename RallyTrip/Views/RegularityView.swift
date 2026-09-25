@@ -6,41 +6,47 @@ struct RegularityView: View {
     @State private var showSchedule = false
     @State private var startDate = Date().addingTimeInterval(60)
     private var result: RegularityResult { session.result }
+    private var hasLivePace: Bool { session.stageActive && session.accuracy != nil && session.state != .paused }
+    private var paceStatus: String {
+        if !session.stageActive { return "Warte auf Start" }
+        if session.state == .paused { return "Streckenmessung pausiert" }
+        if session.accuracy == nil { return "GPS prüfen" }
+        return abs(result.deviation) <= 0.5 ? "Im Takt" : result.deviation > 0 ? "Zu spät" : "Zu früh"
+    }
     private var deltaColor: Color {
-        abs(result.deviation) <= 0.5 ? .green : (result.deviation > 0 ? .orange : .cyan)
+        abs(result.deviation) <= 0.5 ? RallyStyle.accent : (result.deviation > 0 ? .primary : .blue)
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                HStack {
-                    Eyebrow(text: session.stageName.uppercased())
-                    Spacer()
-                    Button { showSegments = true } label: { Label("Schnittplan", systemImage: "list.bullet") }
-                        .font(.subheadline).disabled(session.stageActive || session.state == .scheduled)
+                AdaptiveRow {
+                    Eyebrow(text: session.stageName).frame(maxWidth: .infinity, alignment: .leading)
+                    Button { showSegments = true } label: {
+                        Label("Schnittplan", systemImage: "list.bullet").font(.subheadline).frame(minHeight: 44)
+                    }.disabled(session.stageActive || session.state == .scheduled)
                 }
                 if let countdown = session.countdown {
                     Panel(accent: true) {
                         VStack(spacing: 12) {
-                            Eyebrow(text: "START IN")
-                            Text(String(format: "%02d:%02d", Int(ceil(countdown)) / 60, Int(ceil(countdown)) % 60))
-                                .font(.system(size: 72, weight: .bold, design: .monospaced))
+                            Eyebrow(text: "Start in")
+                            MeterValue(String(format: "%02d:%02d", Int(ceil(countdown)) / 60, Int(ceil(countdown)) % 60), size: 66)
                             Text("App bis zum Start geöffnet lassen.").font(.caption)
                         }.frame(maxWidth: .infinity)
                     }
                 } else {
                     Panel {
                         VStack(spacing: 16) {
-                            Eyebrow(text: session.stageActive ? "ZEITABWEICHUNG" : "PRÜFUNG BEREIT")
+                            Eyebrow(text: session.stageActive ? "Zeitabweichung" : "Prüfung bereit")
                             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                Text(session.stageActive ? RallyFormat.deviation(result.deviation) : "±0,00")
-                                    .font(.system(size: 76, weight: .semibold, design: .monospaced))
-                                    .tracking(-4).minimumScaleFactor(0.3).lineLimit(1)
+                                MeterValue(hasLivePace ? RallyFormat.deviation(result.deviation) : "—", size: 66)
                                 Text("s").font(.title2)
-                            }.foregroundStyle(session.stageActive ? deltaColor : .primary)
-                            Text(!session.stageActive ? "WARTE AUF START" : abs(result.deviation) <= 0.5 ? "IM TAKT" : result.deviation > 0 ? "ZU SPÄT" : "ZU FRÜH")
-                                .font(.system(.caption, design: .monospaced, weight: .bold)).tracking(3)
-                                .foregroundStyle(session.stageActive ? deltaColor : .secondary)
+                            }.foregroundStyle(hasLivePace ? deltaColor : .primary)
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel(hasLivePace ? "Zeitabweichung \(RallyFormat.deviation(result.deviation)) Sekunden" : "Zeitabweichung nicht verfügbar")
+                            Text(paceStatus)
+                                .font(.headline)
+                                .foregroundStyle(hasLivePace ? deltaColor : .secondary)
                             HStack(spacing: 5) {
                                 ForEach(-7...7, id: \.self) { value in
                                     Capsule().fill(barColor(value)).frame(height: value == 0 ? 22 : 12)
@@ -49,22 +55,21 @@ struct RegularityView: View {
                         }.frame(maxWidth: .infinity).padding(.vertical, 12)
                     }
                 }
-                HStack(spacing: 12) {
-                    Panel(accent: true) { Instrument(label: "SOLLSCHNITT", value: RallyFormat.decimal(result.targetSpeed, digits: 1), unit: "km/h", size: 38) }
-                    Panel { Instrument(label: "IST · GPS", value: RallyFormat.decimal(session.speed, digits: 1), unit: "km/h", size: 38) }
+                AdaptiveRow {
+                    Panel(accent: true) { Instrument(label: "Sollschnitt", value: RallyFormat.decimal(result.targetSpeed, digits: 1), unit: "km/h", size: 38) }
+                    Panel { Instrument(label: "Ist · GPS", value: session.accuracy == nil ? "—" : RallyFormat.decimal(session.speed, digits: 1), unit: "km/h", size: 38) }
                 }
                 Panel {
                     VStack(alignment: .leading, spacing: 20) {
-                        Instrument(label: "PRÜFUNGSDISTANZ", value: RallyFormat.distance(session.stageDistance), unit: "km", size: 43)
+                        Instrument(label: "Prüfungsdistanz", value: RallyFormat.distance(session.stageDistance), unit: "km", size: 43)
                         Divider()
-                        HStack {
+                        AdaptiveRow {
                             VStack(alignment: .leading, spacing: 7) {
-                                Eyebrow(text: "ISTZEIT")
+                                Eyebrow(text: "Istzeit")
                                 Text(RallyFormat.duration(session.stageElapsed))
-                            }
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 7) {
-                                Eyebrow(text: "SOLLZEIT")
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 7) {
+                                Eyebrow(text: "Sollzeit")
                                 Text(RallyFormat.duration(result.targetTime))
                             }
                         }.font(.system(.title3, design: .monospaced))
@@ -72,34 +77,38 @@ struct RegularityView: View {
                 }
                 if let remaining = result.metersToChange, let next = result.nextSpeed {
                     Panel {
-                        HStack {
+                        AdaptiveRow {
                             Image(systemName: "arrow.triangle.swap").font(.title2)
                             VStack(alignment: .leading, spacing: 6) {
-                                Eyebrow(text: "NÄCHSTER SCHNITTWECHSEL")
+                                Eyebrow(text: "Nächster Schnittwechsel")
                                 Text("In \(RallyFormat.decimal(remaining, digits: 0)) m")
                                     .font(.system(.title3, design: .monospaced, weight: .semibold))
                             }
-                            Spacer()
                             Text("\(RallyFormat.decimal(next, digits: 0))").font(.system(.largeTitle, design: .monospaced, weight: .bold))
                             Text("km/h").font(.caption).foregroundStyle(.secondary)
                         }
                     }
                 }
                 if !session.stageActive && session.state != .scheduled {
-                    HStack(spacing: 12) {
+                    AdaptiveRow {
                         ActionButton(title: "Startzeit", icon: "clock") {
                             startDate = Calendar.current.date(bySetting: .second, value: 0, of: Date().addingTimeInterval(120)) ?? Date().addingTimeInterval(120)
                             showSchedule = true
                         }
                         ActionButton(title: "WP starten", icon: "flag.checkered", prominent: true) { session.startStage() }
-                    }.disabled(session.state == .paused)
+                    }.disabled(session.state == .paused || session.calibrationCapture != nil)
+                    if session.calibrationCapture != nil {
+                        Label("Beende zuerst die laufende Kalibriermessung.", systemImage: "info.circle")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
                 }
                 if session.busy { SessionControls() }
                 GPSStatus()
                 Text("+ = zu spät · − = zu früh. Die Abweichung hängt von der GPS- und Streckengenauigkeit ab.")
                     .font(.caption).foregroundStyle(.secondary)
             }.padding(20)
-        }.navigationTitle("Regularity").navigationBarTitleDisplayMode(.inline)
+        }.background(RallyStyle.background)
+            .navigationTitle("Regularity").navigationBarTitleDisplayMode(.inline)
             .toolbar(.visible, for: .navigationBar)
             .sheet(isPresented: $showSegments) { SegmentEditor() }
             .sheet(isPresented: $showSchedule) {
@@ -130,7 +139,7 @@ struct RegularityView: View {
 
     private func barColor(_ value: Int) -> Color {
         let position = min(7, max(-7, Int(result.deviation.rounded())))
-        return session.stageActive && value == position ? deltaColor : Color.secondary.opacity(0.2)
+        return hasLivePace && value == position ? deltaColor : Color.secondary.opacity(0.2)
     }
 }
 

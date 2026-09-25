@@ -32,7 +32,7 @@ const scheme = read('RallyTrip.xcodeproj/xcshareddata/xcschemes/RallyTrip.xcsche
 assert(scheme.includes('BlueprintName="RallyTrip"'));
 const tests = walk('Tests').filter(f => f.endsWith('.swift'));
 const testCount = tests.reduce((count, file) => count + [...read(file).matchAll(/func test\w+\(/g)].length, 0);
-assert.equal(testCount, 27);
+assert(testCount >= 27, 'Expected at least the baseline 27 XCTest cases');
 for (const file of [...sources, ...tests]) {
   assert(!read(file).includes('\uFFFD'), `Invalid UTF-8 in ${file}`);
   assert(!/^(<<<<<<<|=======|>>>>>>>)/m.test(read(file)), `Conflict marker in ${file}`);
