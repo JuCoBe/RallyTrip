@@ -95,3 +95,5 @@ jobs:
             build.log
             appium.log
             bridge.log
+            startup.xml
+            startup.png

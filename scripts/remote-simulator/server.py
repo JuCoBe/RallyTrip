@@ -70,7 +70,19 @@ def initialize():
     }}}, timeout=600)
     SESSION = result["sessionId"]
     # A real interaction verifies that the bridge can control, not only view, the app.
-    verify_navigation()
+    try:
+        verify_navigation()
+    except Exception:
+        for name, route in (("startup.xml", "source"), ("startup.png", "screenshot")):
+            try:
+                value = driver("GET", f"/session/{SESSION}/{route}")
+                if route == "screenshot":
+                    Path(name).write_bytes(base64.b64decode(value))
+                else:
+                    Path(name).write_text(value, encoding="utf-8")
+            except Exception as diagnostic_error:
+                print(f"Could not capture {name}: {type(diagnostic_error).__name__}", flush=True)
+        raise
     execute("mobile: terminateApp", {"bundleId": "de.rallytrip.app"})
     execute("mobile: launchApp", {"bundleId": "de.rallytrip.app"})
     EXPIRES = time.time() + 1800
