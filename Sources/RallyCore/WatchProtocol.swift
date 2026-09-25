@@ -67,7 +67,9 @@ public struct WatchCommand: Codable, Sendable {
         case .startStage:
             return snapshot.canStartStage ? nil : "WP-Start derzeit nicht möglich. iPhone prüfen."
         case .correctTotal:
-            guard [-100.0, -10, -1, 1, 10, 100].contains(correctionMeters) else { return "Ungültiger Korrekturschritt." }
+            guard correctionMeters.isFinite, correctionMeters != 0,
+                  (-100...100).contains(correctionMeters), correctionMeters.rounded() == correctionMeters
+            else { return "Korrektur muss zwischen −100 und +100 Metern liegen, in ganzen Metern." }
             return snapshot.canCorrect ? nil : "Korrektur benötigt eine Fahrt ohne laufende Kalibrierung."
         }
     }

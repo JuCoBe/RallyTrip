@@ -17,6 +17,13 @@ struct SettingsView: View {
                 Toggle("Akustische Schnittwechsel-Hinweise", isOn: $session.data.settings.sound)
                 Toggle("Haptisches Feedback", isOn: $session.data.settings.haptics)
             }
+            Section("Apple Watch") {
+                Label("Start, Zeitabweichung und Korrektur", systemImage: "applewatch")
+                Text("Öffne RallyTrip auf dem iPhone und der gekoppelten Apple Watch. Die Watch kann eine Fahrt oder Wertungsprüfung starten. Total stellst du über die Digital Crown um bis zu 100 Meter in beide Richtungen nach und bestätigst mit Übernehmen. Das iPhone übernimmt die GPS-Messung.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                Text("Ohne aktuelle Verbindung sind Start und Korrektur gesperrt. Erlaube den genauen Standort zuerst auf dem iPhone.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
             Section {
                 Toggle("Demo-Modus", isOn: $session.isDemo).disabled(session.busy)
                 Text("Simuliert eine Fahrt mit etwa 48 km/h. GPS wird im Demo-Modus nicht verwendet. Der Modus kann nur zwischen Fahrten gewechselt werden.")

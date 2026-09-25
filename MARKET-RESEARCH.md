@@ -32,3 +32,5 @@ Die Umsetzung ist an den HIG ausgerichtet, keine zertifizierte Konformitäts- od
 ## Bewusst nicht Bestandteil dieser Iteration
 
 Bluetooth-Tasten, externe GNSS-Empfänger, Apple Watch, Live Activities und Roadbook-OCR werden durch den Vergleich als mögliche spätere Erweiterungen sichtbar. Es wurden keine Hardware-Kompatibilität, künstliche Genauigkeitsversprechen, Abonnements oder Cloud-Dienste hinzugefügt. Diese Erweiterungen brauchen eine eigene Anforderungsklärung und Geräteprüfung.
+
+Nachtrag: Auf anschließenden ausdrücklichen Wunsch wurde eine Apple-Watch-Begleitapp für Start, Zeitabweichung und Korrektur ergänzt. Umsetzung und noch ausstehende Geräteprüfung sind in [WATCH.md](WATCH.md) dokumentiert.

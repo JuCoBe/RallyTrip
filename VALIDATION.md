@@ -1,5 +1,19 @@
 # Prüfstand vom 25. September 2026
 
+## Apple-Watch-Erweiterung
+
+- Crown-Nachtrag: Streckenkorrektur mit Fokus und haptischen 1-Meter-Schritten im Bereich −100 bis +100 Meter, Vorschau und explizitem Übernehmen. Protokolltests prüfen zusätzlich Zwischenwerte wie −37/+43 Meter und lehnen Bruchteile sowie Werte außerhalb der Grenzen ab. Die tatsächliche Crown-Bedienung und Fokusübergabe müssen noch am Gerät geprüft werden.
+
+- **40 XCTest-Fälle bestanden, 0 Fehler**, einschließlich 10 neuer Watch-Protokolltests unter Swift 6.3.3 / WSL.
+- Geprüft: Serialisierung, gültige Startzustände, Kalibrier-/Pausensperren, erlaubte Korrekturen, Befehlsalter, Fahrtwechsel, veraltete Anzeigen, Protokollversionen und doppelte Befehlszustellung.
+- Swift-Syntaxprüfung über iPhone, Watch, Rechenkern und Tests bestanden. Dies ersetzt keine SwiftUI-/WatchConnectivity-Typprüfung gegen das Apple-SDK.
+- Projektstruktur: 17 iPhone-Quelldateien, 4 Watch-Quelldateien (einschließlich gemeinsamem Protokoll), beide Schemes, Begleitapp-Kennung, Target-Abhängigkeit, Einbettung und Icons geprüft.
+- Projektgenerator zweimal ausgeführt: identische Projektdatei. Watch-Plist und beide Schemes als XML geprüft.
+- Ein parallel veröffentlichter Zwischenstand (`3851f8c`) hat [CI-Lauf 36189439456](https://github.com/JuCoBe/RallyTrip/actions/runs/36189439456) ausgelöst. Die bisherigen Core-Tests bestanden; der iPhone-Build scheiterte an einem fehlenden Initialwert für `@ScaledMetric` in `Components.swift`. Der Initialwert ist im lokalen Abschlussstand korrigiert. Der getrennte Watch-Build-Schritt wurde nach dem Fehler übersprungen.
+- **Noch nicht bestätigt:** erfolgreicher vollständiger Apple-SDK-Build des Abschlussstands, Installation, visuelle Watch-Abnahme und echte WatchConnectivity-Kommunikation. Geräteszenarien stehen in [WATCH.md](WATCH.md).
+
+## HIG- und Bedienungsupdate
+
 Für das HIG- und Bedienungsupdate tatsächlich ausgeführt:
 
 - `wsl -d Ubuntu -- bash scripts/test-core-wsl.sh`: **30 XCTest-Fälle bestanden, 0 Fehler**, Swift 6.3.3.

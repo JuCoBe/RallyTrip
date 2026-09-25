@@ -8,13 +8,14 @@ final class WatchConnection: NSObject, ObservableObject, WCSessionDelegate {
     @Published private(set) var snapshot: WatchSnapshot?
     @Published private(set) var reachable = false
     @Published private(set) var pendingCommand: UUID?
+    @Published private(set) var lastReply: WatchReply?
     @Published private(set) var feedback: String?
     @Published private(set) var now = Date()
     private var active = false
     private var pollID: UUID?
     private var timer: AnyCancellable?
 
-    var fresh: Bool { snapshot?.isFresh(at: now) == true }
+    var fresh: Bool { active && snapshot?.isFresh(at: now) == true }
     var canSend: Bool { active && reachable && fresh && pendingCommand == nil }
 
     override init() {
@@ -66,13 +67,14 @@ final class WatchConnection: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
-    func send(_ action: WatchAction, correction: Double = 0) {
+    @discardableResult
+    func send(_ action: WatchAction, correction: Double = 0) -> UUID? {
         now = Date()
         reachable = WCSession.default.activationState == .activated && WCSession.default.isReachable
-        guard canSend, let snapshot else { feedback = "Bitte zuerst mit dem iPhone verbinden."; return }
+        guard canSend, let snapshot else { feedback = "Bitte zuerst mit dem iPhone verbinden."; return nil }
         let command = WatchCommand(sessionID: snapshot.sessionID, action: action, correctionMeters: correction)
-        if let error = command.rejection(for: snapshot) { feedback = error; return }
-        guard let data = try? JSONEncoder().encode(command) else { return }
+        if let error = command.rejection(for: snapshot) { feedback = error; return nil }
+        guard let data = try? JSONEncoder().encode(command) else { return nil }
         pendingCommand = command.id
         feedback = nil
         WCSession.default.sendMessage(["command": data], replyHandler: { [weak self] response in
@@ -83,6 +85,7 @@ final class WatchConnection: NSObject, ObservableObject, WCSessionDelegate {
                 self.pendingCommand = nil
                 if let replyData, let reply = try? JSONDecoder().decode(WatchReply.self, from: replyData), reply.commandID == command.id {
                     self.accept(reply.snapshot)
+                    self.lastReply = reply
                     self.feedback = reply.message
                     WKInterfaceDevice.current().play(reply.accepted ? .click : .failure)
                 } else {
@@ -97,6 +100,7 @@ final class WatchConnection: NSObject, ObservableObject, WCSessionDelegate {
             try? await Task.sleep(nanoseconds: 8_000_000_000)
             self?.unconfirmed(command.id)
         }
+        return command.id
     }
 
     private func unconfirmed(_ id: UUID) {

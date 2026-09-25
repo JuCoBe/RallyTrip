@@ -25,6 +25,10 @@ Unter `android/` entsteht eine Android-Version. Die Dateien sind ein Entwicklung
 
 ## Projekt auf dem Mac starten
 
+### Apple Watch
+
+Die Begleitapp **RallyWatch** ab watchOS 10 bietet Fahrt-/WP-Start, Live-Zeitabweichung und Total-Korrekturen über die **Digital Crown**: −100 bis +100 Meter in 1-Meter-Schritten, mit Vorschau und Übernehmen. Das iPhone bleibt die Messquelle. Verbindung, bestätigte Aktionen und veraltete Werte werden ausdrücklich angezeigt. Einrichtung, Grenzen und Geräteprüfung: [WATCH.md](WATCH.md).
+
 ### Simulator von Windows aus öffnen
 
 Auf dem bereits eingerichteten Windows-PC im Projektordner `Simulator-starten.cmd` doppelklicken oder in PowerShell ` .\Simulator-starten.cmd` ausführen. Der Befehl startet den GitHub-Workflow, wartet auf den Simulator und öffnet die App-Steuerung im Standardbrowser. Der Aufbau kann etwa 10–15 Minuten dauern; danach bleibt die Testsitzung maximal 30 Minuten verfügbar. Ein erneuter Start beendet eine noch laufende Sitzung.
@@ -67,6 +71,7 @@ Die Website verwendet relative Links und funktioniert deshalb auch unter einem R
 | Route | MapKit-Karte, getrennte Streckenlinien bei Messlücken und Pausen, manuell angelegte Roadbook-Punkte |
 | Fahrten | Lokales JSON-Archiv, Wiederherstellung des letzten Zwischenspeicherstands, GPX-Export und Löschen |
 | Darstellung | System, Hell, Dunkel, Nacht; Dynamic Type, Fokusmodus; Bildschirm während der Fahrt wach halten |
+| Apple Watch | Begleitapp mit Fahrt-/WP-Start, Zeitabweichung, Total-Korrektur, Verbindungs- und Bestätigungsanzeige |
 | Demo | Simulierte Positionspunkte auf einer Kreisstrecke, explizite Kennzeichnung der Demo-Fahrten |
 
 OBD, externe GNSS-Empfänger, Sensorfusion, Roadbook-Dateiimport und eine errechnete Aufholgeschwindigkeit sind nicht Teil dieser Version. Die `PositionSource`-Schnittstelle ist der Einstiegspunkt für spätere Messquellen. Das Roadbook ist eine manuelle Kilometer-/Hinweisliste, keine Abbiegenavigation.
@@ -151,6 +156,7 @@ Diese Prüfung kontrolliert die Projektverweise, Quelldateieinbindung, Ressource
 
 ```text
 RallyTrip.xcodeproj/        Direkt in Xcode zu öffnendes iPhone-Projekt
+RallyWatch/                Apple-Watch-Begleitapp mit Anzeige und Fernsteuerung
 RallyTrip/
   App/                     SwiftUI-Einstiegspunkt
   Views/                   Bedienoberfläche und GPX-Dateiexport

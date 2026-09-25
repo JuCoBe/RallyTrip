@@ -23,7 +23,7 @@ struct WatchDashboard: View {
                         }
                     }.accessibilityElement(children: .combine)
 
-                    LabeledContent("Total", value: "\(WatchFormat.kilometers(snapshot.totalMeters)) km")
+                    LabeledContent(connection.fresh ? "Total" : "Total · letzter Stand", value: "\(WatchFormat.kilometers(snapshot.totalMeters)) km")
                         .font(.caption).monospacedDigit()
 
                     if snapshot.state == .ready {
@@ -74,28 +74,70 @@ struct WatchDashboard: View {
 
 struct WatchCorrectionView: View {
     @EnvironmentObject private var connection: WatchConnection
-    @State private var step = 10
+    @State private var crownMeters = 0.0
+    @State private var submittedCommand: UUID?
+    @FocusState private var crownFocused: Bool
+
+    private var canEdit: Bool { connection.canSend && connection.snapshot?.canCorrect == true }
+    private var correction: Double { crownMeters.rounded() }
+    private var correctionLabel: String {
+        "\(correction > 0 ? "+" : correction < 0 ? "−" : "")\(Int(abs(correction))) m"
+    }
+    private var crownBinding: Binding<Double> {
+        Binding(get: { crownMeters }, set: { value in
+            guard canEdit, value.isFinite else { return }
+            crownMeters = min(100, max(-100, value))
+        })
+    }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
                 WatchConnectionStatus()
                 if let snapshot = connection.snapshot {
-                    Text("Total").font(.caption).foregroundStyle(.secondary)
+                    Text(connection.fresh ? "Total" : "Total · letzter Stand").font(.caption).foregroundStyle(.secondary)
                     Text("\(WatchFormat.kilometers(snapshot.totalMeters)) km")
                         .font(.system(.title2, design: .rounded)).monospacedDigit()
                         .minimumScaleFactor(0.5).lineLimit(1)
-                    Picker("Schrittweite", selection: $step) {
-                        Text("1 m").tag(1)
-                        Text("10 m").tag(10)
-                        Text("100 m").tag(100)
-                    }.pickerStyle(.navigationLink)
-                    Button { connection.send(.correctTotal, correction: -Double(step)) } label: {
-                        Label("\(step) m abziehen", systemImage: "minus").frame(minHeight: 44)
-                    }.disabled(!connection.canSend || !snapshot.canCorrect)
-                    Button { connection.send(.correctTotal, correction: Double(step)) } label: {
-                        Label("\(step) m addieren", systemImage: "plus").frame(minHeight: 44)
-                    }.disabled(!connection.canSend || !snapshot.canCorrect)
+                    VStack(spacing: 4) {
+                        Text("Krone drehen").font(.caption).foregroundStyle(.secondary)
+                        Text(correctionLabel).font(.system(.largeTitle, design: .rounded, weight: .semibold))
+                            .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                        Text("−100 bis +100 m · 1 m pro Schritt").font(.caption2).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 70).padding(8)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 12))
+                    .contentShape(Rectangle())
+                    .focusable(canEdit)
+                    .focused($crownFocused)
+                    .digitalCrownRotation(crownBinding, from: -100.0, through: 100.0, by: 1.0,
+                                          sensitivity: .low, isContinuous: false, isHapticFeedbackEnabled: true)
+                    .onTapGesture { crownFocused = canEdit }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Streckenkorrektur")
+                    .accessibilityValue(correctionLabel)
+                    .accessibilityHint("Mit der Digital Crown einstellen. Erst Übernehmen ändert die Strecke.")
+                    .accessibilityAdjustableAction { direction in
+                        guard canEdit else { return }
+                        switch direction {
+                        case .increment: crownMeters = min(100, correction + 1)
+                        case .decrement: crownMeters = max(-100, correction - 1)
+                        @unknown default: break
+                        }
+                    }
+                    Text("Vorschau: \(WatchFormat.kilometers(max(0, snapshot.totalMeters + correction))) km")
+                        .font(.caption).monospacedDigit()
+                    Button {
+                        submittedCommand = connection.send(.correctTotal, correction: correction)
+                    } label: {
+                        Label("Übernehmen", systemImage: "checkmark").frame(minHeight: 44)
+                    }.buttonStyle(.borderedProminent).disabled(!canEdit || correction == 0)
+                    Button {
+                        crownMeters = 0
+                        crownFocused = canEdit
+                    } label: {
+                        Text("Verwerfen").frame(minHeight: 44)
+                    }.disabled(connection.pendingCommand != nil || correction == 0)
                     Text("Ändert Total und die WP-Distanz. Trip bleibt unverändert.")
                         .font(.caption2).foregroundStyle(.secondary)
                     if !snapshot.canCorrect {
@@ -105,6 +147,18 @@ struct WatchCorrectionView: View {
                 WatchCommandFeedback()
             }.padding(.horizontal, 4)
         }.navigationTitle("Korrektur")
+            .onAppear { crownFocused = canEdit }
+            .onChange(of: canEdit) { _, enabled in crownFocused = enabled }
+            .onChange(of: connection.snapshot?.sessionID) { _, _ in
+                crownMeters = 0
+                submittedCommand = nil
+            }
+            .onChange(of: connection.lastReply?.commandID) { _, id in
+                guard id == submittedCommand, connection.lastReply?.accepted == true else { return }
+                crownMeters = 0
+                submittedCommand = nil
+                crownFocused = canEdit
+            }
     }
 }
 

@@ -57,7 +57,7 @@ struct Eyebrow: View {
 /// Instruments scale with the system text size and use stable digit widths.
 struct MeterValue: View {
     var value: String
-    @ScaledMetric(relativeTo: .largeTitle) private var pointSize: CGFloat
+    @ScaledMetric(relativeTo: .largeTitle) private var pointSize: CGFloat = 66
 
     init(_ value: String, size: CGFloat = 66) {
         self.value = value
