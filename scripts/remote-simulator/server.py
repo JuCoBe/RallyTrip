@@ -36,6 +36,25 @@ def execute(script, args):
     return driver("POST", f"/session/{SESSION}/execute/sync", {"script": script, "args": [args]})
 
 
+def wait_for_element(selector, timeout=30):
+    deadline = time.monotonic() + timeout
+    while True:
+        elements = driver("POST", f"/session/{SESSION}/elements", {
+            "using": "-ios predicate string", "value": selector})
+        if elements:
+            return elements[0]["element-6066-11e4-a52e-4f735466cecf"]
+        if time.monotonic() >= deadline:
+            raise RuntimeError(f"Smoke test element not found: {selector}")
+        time.sleep(0.5)
+
+
+def verify_navigation():
+    # Select the actual tab: screen coordinates become stale after layout changes.
+    tab = wait_for_element('type == "XCUIElementTypeButton" AND name == "Tripmaster" AND visible == 1')
+    driver("POST", f"/session/{SESSION}/element/{tab}/click", {})
+    wait_for_element('type == "XCUIElementTypeNavigationBar" AND name == "Tripmaster"')
+
+
 def initialize():
     global SESSION, EXPIRES
     result = driver("POST", "/session", {"capabilities": {"alwaysMatch": {
@@ -51,11 +70,7 @@ def initialize():
     }}}, timeout=600)
     SESSION = result["sessionId"]
     # A real interaction verifies that the bridge can control, not only view, the app.
-    rect = driver("GET", f"/session/{SESSION}/window/rect")
-    execute("mobile: tap", {"x": rect["width"] * .5, "y": rect["height"] * .44})
-    source = driver("GET", f"/session/{SESSION}/source")
-    if "Fahrt starten" not in source:
-        raise RuntimeError("Smoke test failed: Tripmaster did not open")
+    verify_navigation()
     execute("mobile: terminateApp", {"bundleId": "de.rallytrip.app"})
     execute("mobile: launchApp", {"bundleId": "de.rallytrip.app"})
     EXPIRES = time.time() + 1800

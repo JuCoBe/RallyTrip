@@ -15,6 +15,24 @@ bridge = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bridge)
 
 
+class NavigationTests(unittest.TestCase):
+    def test_waits_for_tab_and_destination_after_click(self):
+        element_key = 'element-6066-11e4-a52e-4f735466cecf'
+        with patch.object(bridge, 'SESSION', 'test-session'), patch.object(
+            bridge, 'driver', side_effect=[[], [{element_key: 'tab'}], None,
+                                           [], [{element_key: 'navigation'}]]
+        ) as driver, patch.object(bridge.time, 'sleep'):
+            bridge.verify_navigation()
+        self.assertEqual(driver.call_args_list[2].args,
+                         ('POST', '/session/test-session/element/tab/click', {}))
+        self.assertIn('XCUIElementTypeNavigationBar', driver.call_args_list[-1].args[2]['value'])
+
+    def test_missing_destination_fails_instead_of_reporting_ready(self):
+        with patch.object(bridge, 'driver', return_value=[]):
+            with self.assertRaisesRegex(RuntimeError, 'Smoke test element not found'):
+                bridge.wait_for_element('name == "Tripmaster"', timeout=0)
+
+
 class BridgeSecurityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -28,9 +28,21 @@ try {
     }
     $taskAccess = Get-Content -LiteralPath $taskAccessPath -Raw | ConvertFrom-Json
     if ($taskAccess.token -notmatch '^[A-Za-z0-9_-]{32,}$') { throw 'Der lokale Zugangsschluessel ist ungueltig.' }
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'Git wurde nicht gefunden. Bitte Git fuer Windows installieren.' }
+    # Explorer does not inherit the Git path supplied by the Codex terminal.
+    $taskGitCommand = Get-Command git.exe -CommandType Application -ErrorAction SilentlyContinue
+    $taskGitPath = if ($taskGitCommand) { $taskGitCommand.Source } else { $null }
+    if (-not $taskGitPath) {
+        $taskGitCandidates = @(
+            "$env:ProgramFiles\Git\cmd\git.exe"
+            "${env:ProgramFiles(x86)}\Git\cmd\git.exe"
+            "$env:LOCALAPPDATA\Programs\Git\cmd\git.exe"
+            "$env:USERPROFILE\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
+        )
+        $taskGitPath = $taskGitCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+    }
+    if (-not $taskGitPath) { throw 'Git wurde nicht gefunden. Bitte Git fuer Windows installieren.' }
     $env:GCM_INTERACTIVE = 'never'
-    $taskCredential = "protocol=https`nhost=github.com`nusername=JuCoBe`n`n" | git -C $taskRoot credential fill 2>$null
+    $taskCredential = "protocol=https`nhost=github.com`nusername=JuCoBe`n`n" | & $taskGitPath -C $taskRoot credential fill 2>$null
     if ($LASTEXITCODE -ne 0) { throw 'GitHub-Anmeldung fehlt. Bitte zuerst Git fuer JuCoBe bei GitHub anmelden.' }
     $taskPasswordLine = @($taskCredential | Where-Object { $_.StartsWith('password=') })
     if ($taskPasswordLine.Count -ne 1) { throw 'GitHub-Zugang konnte nicht geladen werden.' }
