@@ -25,6 +25,8 @@ class NavigationTests(unittest.TestCase):
             bridge.verify_navigation()
         self.assertEqual(driver.call_args_list[2].args,
                          ('POST', '/session/test-session/element/tab/click', {}))
+        self.assertIn('label == "Tripmaster"', driver.call_args_list[0].args[2]['value'])
+        self.assertNotIn('name == "Tripmaster"', driver.call_args_list[0].args[2]['value'])
         self.assertIn('XCUIElementTypeNavigationBar', driver.call_args_list[-1].args[2]['value'])
 
     def test_missing_destination_fails_instead_of_reporting_ready(self):

@@ -50,7 +50,8 @@ def wait_for_element(selector, timeout=30):
 
 def verify_navigation():
     # Select the actual tab: screen coordinates become stale after layout changes.
-    tab = wait_for_element('type == "XCUIElementTypeButton" AND name == "Tripmaster" AND visible == 1')
+    # SwiftUI's symbol becomes the Appium name ("speedometer"); the title is label.
+    tab = wait_for_element('type == "XCUIElementTypeButton" AND label == "Tripmaster" AND visible == 1')
     driver("POST", f"/session/{SESSION}/element/{tab}/click", {})
     wait_for_element('type == "XCUIElementTypeNavigationBar" AND name == "Tripmaster"')
 
