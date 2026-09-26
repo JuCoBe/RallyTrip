@@ -22,6 +22,24 @@ final class RallySession: ObservableObject {
     @Published private(set) var stageDistance = 0.0
     @Published private(set) var countdown: Double?
     @Published var isDemo = false
+    @Published var demoSpeedKPH = min(200, max(0, UserDefaults.standard.object(forKey: "demoSpeedKPH") as? Double ?? 48)) {
+        didSet { UserDefaults.standard.set(demoSpeedKPH, forKey: "demoSpeedKPH") }
+    }
+    @Published var circuitGPS = GPSCircuitEngine(archive: UserDefaults.standard.data(forKey: "circuitGPS")
+        .flatMap { try? JSONDecoder().decode(CircuitGPSArchive.self, from: $0) })
+    var circuit: CircuitTimer { circuitGPS.timer }
+    @Published private(set) var circuitDemo = false
+    @Published var circuitDemoRate = 1.0
+    private var circuitDemoClock = 0.0
+    private var circuitDemoPhase = -Double.pi / 2
+    private var circuitDemoTick: Double?
+    var circuitNow: Double { circuitDemo ? circuitDemoClock : now }
+    @Published private(set) var circuitFix: GPSPoint?
+    @Published private(set) var circuitGPSStatus = "GPS noch nicht aktiviert"
+    private let circuitLocation = LocationEngine()
+    private var circuitPrecise = true
+    private var circuitMonitoring = false
+    private var circuitLastFix: Double?
     @Published var stageName = "WP 01"
     @Published var errorMessage: String?
     @Published var notice: String?
@@ -84,6 +102,14 @@ final class RallySession: ObservableObject {
             storageReadable = false
             data = StoredData()
             errorMessage = "Gespeicherte Daten konnten nicht gelesen werden. Die Originaldatei bleibt erhalten. \(error.localizedDescription)"
+        }
+        circuitLocation.onPoint = { [weak self] point in self?.receiveCircuit(point) }
+        circuitLocation.onStatus = { [weak self] message, precise in
+            guard let self else { return }
+            guard !self.circuitDemo else { return }
+            self.circuitPrecise = precise
+            self.circuitGPSStatus = message
+            if !precise { self.circuitFix = nil; self.circuitGPS.interrupt() }
         }
         location.onPoint = { [weak self] point in self?.receive(point) }
         location.onStatus = { [weak self] message, precise in
@@ -308,6 +334,20 @@ final class RallySession: ObservableObject {
     private func tick() {
         defer { watchBridge.publish() }
         let instant = now
+        if circuitDemo, circuitGPS.enabled {
+            let dt = max(0, instant - (circuitDemoTick ?? instant))
+            if dt >= 0.2 {
+                circuitDemoTick = instant
+                // The demo deliberately pauses across suspension; never invent a crossing through a gap.
+                if dt > 2 { circuitGPS.interrupt() }
+                else { advanceCircuitDemo(by: dt * circuitDemoRate) }
+            }
+        }
+        if !circuitDemo, circuitMonitoring, let last = circuitLastFix, instant - last > 5 {
+            circuitFix = nil; circuitGPS.interrupt()
+            circuitGPSStatus = "GPS verloren · Runde ungültig bis Start/Ziel"
+            circuitLastFix = nil
+        }
         if let deadline {
             countdown = max(0, deadline - instant)
             if instant >= deadline { beginStage(at: deadline) }
@@ -318,7 +358,7 @@ final class RallySession: ObservableObject {
             let dt = min(1, max(0, instant - (demoLastTick ?? instant)))
             if dt >= 0.2 {
                 demoLastTick = instant
-                let kph = (stageActive ? result.targetSpeed : 48) + sin(instant / 5) * 2
+                let kph = min(200, max(0, demoSpeedKPH))
                 demoMeters += kph / 3.6 * dt
                 let phase = demoMeters / 2000
                 receive(GPSPoint(latitude: 48.14 + sin(phase) * 0.0179864,
@@ -392,7 +432,7 @@ final class RallySession: ObservableObject {
     }
 
     func updateIdleTimer() {
-        UIApplication.shared.isIdleTimerDisabled = data.settings.keepAwake && busy
+        UIApplication.shared.isIdleTimerDisabled = data.settings.keepAwake && (busy || circuitGPS.enabled)
     }
     func requestPreciseLocation() { location.requestPreciseLocation() }
     func beginCalibration(officialMeters: Double) {
@@ -463,5 +503,82 @@ final class RallySession: ObservableObject {
         next.rides.remove(atOffsets: offsets)
         do { try RallyStore.save(next); data = next }
         catch { errorMessage = "Löschen nicht gespeichert: \(error.localizedDescription)" }
+    }
+}
+
+
+extension RallySession {
+    func monitorCircuitGPS() {
+        circuitMonitoring = true
+        if !circuitDemo { circuitLocation.start() }
+    }
+    func stopCircuitPreview() {
+        guard !circuitGPS.enabled else { return }
+        circuitMonitoring = false; circuitLocation.stop(); circuitFix = nil
+    }
+    func configureCircuit(_ gate: CircuitGate) {
+        guard !circuitGPS.enabled, gate.isValid else { return }
+        circuitGPS.configure(gate); saveCircuit()
+    }
+    func startCircuit() {
+        if circuitDemo {
+            circuitDemoClock = 0; circuitDemoPhase = -.pi / 2; circuitDemoTick = now
+        }
+        circuitGPS.start(); monitorCircuitGPS(); updateIdleTimer()
+    }
+    func stopCircuit() {
+        circuitGPS.stop(); saveCircuit(); updateIdleTimer()
+    }
+    func resetCircuit() { circuitGPS.reset(); saveCircuit(); updateIdleTimer() }
+    private func saveCircuit() {
+        if let encoded = try? JSONEncoder().encode(circuitGPS.archive) {
+            UserDefaults.standard.set(encoded, forKey: circuitDemo ? "circuitGPSDemo" : "circuitGPS")
+        }
+    }
+    private func receiveCircuit(_ point: GPSPoint) {
+        guard !circuitDemo else { return }
+        guard circuitPrecise, point.accuracy >= 0, point.accuracy <= 20,
+              (-85...85).contains(point.latitude), (-180...180).contains(point.longitude),
+              Date().timeIntervalSince(point.timestamp) <= 5,
+              Date().timeIntervalSince(point.timestamp) >= -1 else {
+            circuitFix = nil; circuitGPS.interrupt()
+            circuitGPSStatus = "GPS ungenau · kein Rundenvergleich"
+            return
+        }
+        circuitFix = point; circuitLastFix = now
+        circuitGPSStatus = "GPS ± \(Int(point.accuracy)) m"
+        let instant = now - max(0, Date().timeIntervalSince(point.timestamp))
+        if circuitGPS.ingest(point, at: instant) { saveCircuit(); feedback() }
+    }
+}
+
+
+extension RallySession {
+    func setCircuitDemo(_ enabled: Bool) {
+        guard !circuitGPS.enabled, enabled != circuitDemo else { return }
+        saveCircuit()
+        circuitLocation.stop(); circuitFix = nil; circuitLastFix = nil
+        circuitDemo = enabled
+        let key = enabled ? "circuitGPSDemo" : "circuitGPS"
+        circuitGPS = GPSCircuitEngine(archive: UserDefaults.standard.data(forKey: key)
+            .flatMap { try? JSONDecoder().decode(CircuitGPSArchive.self, from: $0) })
+        if enabled && circuitGPS.gate == nil {
+            circuitGPS.configure(.init(latitude: 50.3356, longitude: 6.9475, bearing: 0))
+        }
+        circuitGPSStatus = enabled ? "DEMO · Kreisstrecke 628 m" : "GPS wird gesucht"
+        monitorCircuitGPS()
+    }
+    private func advanceCircuitDemo(by dt: Double) {
+        circuitDemoClock += dt
+        circuitDemoPhase += demoSpeedKPH / 3.6 * dt / 100
+        let scale = 180 / Double.pi / 6_371_000
+        let latitude = 50.3356 + 100.0 * sin(circuitDemoPhase) * scale
+        let longitudeScale = scale / cos(50.3356 * Double.pi / 180.0)
+        let longitude = 6.9475 + 100.0 * (1.0 - cos(circuitDemoPhase)) * longitudeScale
+        let timestamp = Date(timeIntervalSince1970: circuitDemoClock)
+        let point = GPSPoint(latitude: latitude, longitude: longitude,
+                             speedMPS: demoSpeedKPH / 3.6, accuracy: 3, timestamp: timestamp)
+        if circuitGPS.ingest(point, at: circuitDemoClock, now: point.timestamp) { saveCircuit(); feedback() }
+        circuitGPSStatus = "DEMO · GPS simuliert · \(Int(demoSpeedKPH)) km/h"
     }
 }

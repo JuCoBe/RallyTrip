@@ -26,7 +26,8 @@ struct SettingsView: View {
             }
             Section {
                 Toggle("Demo-Modus", isOn: $session.isDemo).disabled(session.busy)
-                Text("Simuliert eine Fahrt mit etwa 48 km/h. GPS wird im Demo-Modus nicht verwendet. Der Modus kann nur zwischen Fahrten gewechselt werden.")
+                if session.isDemo { DemoSpeedControl() }
+                Text("Simuliert eine Fahrt mit der eingestellten Geschwindigkeit. Du kannst sie auch während einer Demo-Fahrt ändern. GPS wird dabei nicht verwendet. Der Modus kann nur zwischen Fahrten gewechselt werden.")
                     .font(.caption).foregroundStyle(.secondary)
             } header: { Text("Ausprobieren") }
             Section("Messquelle") {
@@ -57,5 +58,21 @@ struct SettingsView: View {
             .toolbar(.visible, for: .navigationBar)
             .onDisappear { session.persist(); session.updateIdleTimer() }
             .onChange(of: session.data.settings.keepAwake) { _, _ in session.updateIdleTimer() }
+    }
+}
+
+struct DemoSpeedControl: View {
+    @EnvironmentObject private var session: RallySession
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Stepper(value: $session.demoSpeedKPH, in: 0...200, step: 1) {
+                Text("Demo: \(RallyFormat.decimal(session.demoSpeedKPH, digits: 0)) km/h")
+                    .monospacedDigit()
+            }
+            Slider(value: $session.demoSpeedKPH, in: 0...200, step: 1)
+                .accessibilityLabel("Demo-Geschwindigkeit")
+                .accessibilityValue("\(RallyFormat.decimal(session.demoSpeedKPH, digits: 0)) Kilometer pro Stunde")
+        }
     }
 }

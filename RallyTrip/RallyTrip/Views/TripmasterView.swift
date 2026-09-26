@@ -91,6 +91,7 @@ struct TripmasterView: View {
                         }
                     }
                 }
+                if session.isDemo { DemoSpeedControl() }
                 SessionControls()
             }.padding(20)
         }.background(RallyStyle.background)

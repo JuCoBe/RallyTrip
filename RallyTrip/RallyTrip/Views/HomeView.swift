@@ -5,7 +5,7 @@ struct HomeView: View {
     @State private var selection = Destination.overview
 
     private enum Destination: Hashable {
-        case overview, tripmaster, regularity, route
+        case overview, tripmaster, regularity, circuit, route
     }
 
     init(initialTab: String? = nil) {
@@ -13,6 +13,7 @@ struct HomeView: View {
         switch initialTab {
         case "tripmaster": destination = .tripmaster
         case "regularity": destination = .regularity
+        case "circuit": destination = .circuit
         case "route": destination = .route
         default: destination = .overview
         }
@@ -30,6 +31,9 @@ struct HomeView: View {
             NavigationStack { RegularityView() }
                 .tabItem { Label("Regularity", systemImage: "stopwatch") }
                 .tag(Destination.regularity)
+            NavigationStack { CircuitView() }
+                .tabItem { Label("Rundstrecke", systemImage: "flag.checkered") }
+                .tag(Destination.circuit)
             NavigationStack { RouteView() }
                 .tabItem { Label("Route", systemImage: "map") }
                 .tag(Destination.route)

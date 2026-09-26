@@ -37,6 +37,7 @@ struct RallyTripApp: App {
         switch ProcessInfo.processInfo.environment["RALLYTRIP_SCREENSHOT"] {
         case "tripmaster": HomeView(initialTab: "tripmaster")
         case "regularity": HomeView(initialTab: "regularity")
+        case "circuit": HomeView(initialTab: "circuit")
         case "route": HomeView(initialTab: "route")
         case "calibration": NavigationStack { CalibrationView() }
         case "settings": NavigationStack { SettingsView() }
