@@ -516,9 +516,13 @@ extension RallySession {
         guard !circuitGPS.enabled else { return }
         circuitMonitoring = false; circuitLocation.stop(); circuitFix = nil
     }
-    func configureCircuit(_ gate: CircuitGate) {
-        guard !circuitGPS.enabled, gate.isValid else { return }
-        circuitGPS.configure(gate); saveCircuit()
+    @discardableResult
+    func configureCircuit(_ gate: CircuitGate) -> Bool {
+        guard !circuitGPS.enabled, gate.isValid else { return false }
+        let previous = circuitGPS
+        circuitGPS.configure(gate)
+        guard saveCircuit() else { circuitGPS = previous; return false }
+        return true
     }
     func startCircuit() {
         if circuitDemo {
@@ -530,9 +534,15 @@ extension RallySession {
         circuitGPS.stop(); saveCircuit(); updateIdleTimer()
     }
     func resetCircuit() { circuitGPS.reset(); saveCircuit(); updateIdleTimer() }
-    private func saveCircuit() {
-        if let encoded = try? JSONEncoder().encode(circuitGPS.archive) {
+    @discardableResult
+    func saveCircuit() -> Bool {
+        do {
+            let encoded = try JSONEncoder().encode(circuitGPS.archive)
             UserDefaults.standard.set(encoded, forKey: circuitDemo ? "circuitGPSDemo" : "circuitGPS")
+            return true
+        } catch {
+            errorMessage = "Start/Ziel und Referenzrunde konnten nicht gespeichert werden: \(error.localizedDescription)"
+            return false
         }
     }
     private func receiveCircuit(_ point: GPSPoint) {

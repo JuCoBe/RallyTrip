@@ -23,6 +23,13 @@ Im Demo-Modus lässt sich die simulierte Geschwindigkeit von 0 bis 200 km/h in 1
 
 Regularity bietet wie der Tripmaster oben rechts **Fokus / Alle Details**. Fokus blendet Schnittplan, Distanz-/Zeitdetails und Erklärung aus. Zeitabweichung bzw. Countdown, Soll-/Istgeschwindigkeit, nächster Schnittwechsel, GPS-Status und Fahrtsteuerung bleiben verfügbar. Die Auswahl wird unabhängig vom Tripmaster gespeichert.
 
+## Vollbild, Zielkoordinate und Referenzrunde (27. September 2026)
+
+- **Vollbild** in Regularity und Rundstrecke blendet Navigation, Tabs und Statusleiste aus. Ein dauerhaft erreichbarer Button beendet die Ansicht. Im Rundstrecken-Vollbild entfallen Demo-Einstellungen, Ergebnisliste und Speicher-/Löschaktionen; Rundenzeit, LEDs, GPS-Status und Messungssteuerung bleiben erreichbar.
+- **Zielkoordinate speichern** speichert Start/Ziel mit Fahrtrichtung. Erneutes Speichern unveränderter Werte erhält die Referenz und Rundenliste. Erst eine geänderte Position oder Richtung setzt sie zurück. Beim Öffnen des Editors bleiben alle gespeicherten Nachkommastellen erhalten.
+- **Referenzrunde speichern** bietet eine ausdrückliche Speicheraktion mit Bestätigung. Die automatische Speicherung abgeschlossener Runden bleibt aktiv. Referenzzeit und GPS-Distanz-/Zeitprofil werden beim Neustart wiederverwendet; eine unvollständige Runde wird verworfen. Demo und reale Messungen bleiben getrennt.
+- Die **LEDs** stehen auf dunklem Hintergrund und leuchten mit kräftigen Farben, Kontur und Leuchteffekt. Bei größerer Abweichung leuchten mehrere Lampen: Blau = voraus, Orange = zurück, Grün = im Bereich ±0,5 s. Ohne gültigen Vergleich sind die Lampen gedimmt und der fehlende Messwert wird erklärt. Im Stillstand lässt sich über **LED-Lampentest** die gesamte Reihe einschalten; beim Start der Messung endet der Test automatisch.
+
 ## Rundstrecke – GPS-Gleichmäßigkeit und Demo
 
 Im Tab **Rundstrecke** zunächst **Start/Ziel festlegen**: aktuelle GPS-Position übernehmen oder Breiten-/Längengrad eingeben; die Fahrtrichtung in Grad festlegen (0 Nord, 90 Ost). Speichern setzt Referenz und Rundenliste zurück. Die Startlinie ist 50 m breit und steht quer zur Fahrtrichtung. **GPS-Rundenerkennung starten** wartet auf eine Überfahrt in dieser Richtung. Zuvor mindestens 75 m vom Punkt entfernen; zwischen Überfahrten liegen mindestens 10 Sekunden. GPS-Punkte benötigen höchstens 20 m gemeldete Ungenauigkeit. Die Überfahrtszeit wird zwischen zwei GPS-Punkten interpoliert.

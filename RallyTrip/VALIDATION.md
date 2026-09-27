@@ -1,3 +1,12 @@
+## Vollbild und Rundstrecken-Speicherung, 27. September 2026
+
+- `swift test` mit Swift 6.3.3 unter WSL: **49 Tests erfolgreich, 0 Fehler**.
+- Neuer Regressionstest: unverändertes Start/Ziel erhält Referenz und Vergleichsprofil; JSON-Rundlauf erhält Koordinate, Zeit und Profil; nach Wiederherstellung entstehen erneut Live-Abweichungen; Rundenreset erhält die Zielkoordinate.
+- Swift-Syntaxprüfung der geänderten App-Dateien erfolgreich. Dies ersetzt keinen SwiftUI-Typcheck mit Apple-SDK.
+- `node RallyTrip/scripts/verify-project.mjs` vom Repository-Hauptordner: erfolgreich, 74 Projektobjekte, 17 iPhone- und 4 Watch-Quelldateien. Die Prüfung akzeptiert nun auch von Xcode ergänzte Kommentare und Formatierung.
+- Die aktuelle App liegt seit dem importierten Commit `76798e1` im Unterordner `RallyTrip/`; das zugehörige Xcode-Projekt ist `RallyTrip/RallyTrip.xcodeproj`. Das ältere Projekt im Repository-Hauptordner gehört nicht zu diesem geprüften Stand.
+- Noch offen: Apple-SDK-Build und visuelle Prüfung auf iPhone/Simulator für Hoch-/Querformat, große Schrift, Vollbild-Ein-/Ausstieg und LED-Kontrast. Keine Veröffentlichung oder Geräteinstallation im Rahmen dieser Änderung.
+
 ## GPS-Rundstrecke und Rundstrecken-Demo, 26. September 2026
 
 - 48 Core-Tests erfolgreich. Neue Prüfungen: gerichtete/interpolierte Startlinienüberfahrt, Rückwärtsfahrt und Stillstand, GPS-Lücken, ungenaue Punkte, Wiederherstellung ohne laufende Uhr sowie schnellerer/langsamerer Vergleich und beschleunigte Demo an der simulierten Streckenposition.

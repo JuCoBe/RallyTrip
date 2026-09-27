@@ -117,13 +117,13 @@ struct RegularityView: View {
             }.padding(20)
         }.background(RallyStyle.background)
             .navigationTitle("Regularity").navigationBarTitleDisplayMode(.inline)
-            .toolbar(.visible, for: .navigationBar)
+            .modifier(DrivingFullscreen(enabled: $focusMode))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { focusMode.toggle() } label: {
-                        Label(focusMode ? "Alle Details" : "Fokus", systemImage: focusMode ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                        Label("Vollbild", systemImage: "arrow.up.left.and.arrow.down.right")
                             .frame(minHeight: 44)
-                    }.accessibilityLabel(focusMode ? "Alle Details anzeigen" : "Fokusmodus aktivieren")
+                    }.accessibilityLabel("Vollbild aktivieren")
                         .accessibilityValue(focusMode ? "Fokus aktiv" : "Alle Details sichtbar")
                 }
             }
@@ -227,6 +227,7 @@ struct CircuitView: View {
     @State private var showGate = false
     @State private var confirmStop = false
     @State private var confirmReset = false
+    @State private var savedReference = false
     @AppStorage("circuitFocusMode") private var focusMode = false
 
     private var elapsed: Double { session.circuit.elapsed(at: session.circuitNow) }
@@ -238,20 +239,22 @@ struct CircuitView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                Toggle("Rundstrecken-Demo", isOn: Binding(get: { session.circuitDemo }, set: { session.setCircuitDemo($0) }))
-                    .disabled(session.circuitGPS.enabled)
-                if session.circuitDemo {
-                    Panel {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Label("DEMO · Kreisstrecke 628 m", systemImage: "testtube.2").font(.headline)
-                            DemoSpeedControl()
-                            Picker("Zeitraffer", selection: $session.circuitDemoRate) {
-                                Text("1×").tag(1.0)
-                                Text("2×").tag(2.0)
-                                Text("5×").tag(5.0)
-                            }.pickerStyle(.segmented)
-                            Text("Zeitraffer beschleunigt Fahrt und Uhr gemeinsam. Fahre die Referenz z. B. mit 48 km/h, danach mit 44 oder 52 km/h. Start/Ziel wird automatisch überfahren. Demo und echte Runden sind getrennt gespeichert.")
-                                .font(.caption).foregroundStyle(.secondary)
+                if !focusMode {
+                    Toggle("Rundstrecken-Demo", isOn: Binding(get: { session.circuitDemo }, set: { session.setCircuitDemo($0); savedReference = false }))
+                        .disabled(session.circuitGPS.enabled)
+                    if session.circuitDemo {
+                        Panel {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Label("DEMO · Kreisstrecke 628 m", systemImage: "testtube.2").font(.headline)
+                                DemoSpeedControl()
+                                Picker("Zeitraffer", selection: $session.circuitDemoRate) {
+                                    Text("1×").tag(1.0)
+                                    Text("2×").tag(2.0)
+                                    Text("5×").tag(5.0)
+                                }.pickerStyle(.segmented)
+                                Text("Zeitraffer beschleunigt Fahrt und Uhr gemeinsam. Fahre die Referenz z. B. mit 48 km/h, danach mit 44 oder 52 km/h. Start/Ziel wird automatisch überfahren. Demo und echte Runden sind getrennt gespeichert.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
@@ -260,7 +263,7 @@ struct CircuitView: View {
                         Eyebrow(text: session.circuit.isRunning
                             ? "Runde \(session.circuit.laps.count + 1) · \(session.circuit.reference == nil ? "Referenzrunde" : "Bestätigungsrunde")"
                             : "Rundstrecke · bereit")
-                        MeterValue(lapTime(elapsed), size: 60)
+                        MeterValue(lapTime(elapsed), size: focusMode ? 80 : 60)
                             .accessibilityLabel("Rundenzeit \(lapTime(elapsed))")
                         if let reference = session.circuit.reference {
                             Text("Referenz: \(lapTime(reference))").monospacedDigit()
@@ -277,7 +280,8 @@ struct CircuitView: View {
                 }
                 CircuitLEDs(deviation: session.circuitGPS.deviation,
                             status: !session.circuitGPS.lapValid ? "GPS-Lücke · Runde wird verworfen" :
-                                session.circuit.reference == nil ? "Referenzrunde aufzeichnen" : "Warte auf gültige GPS-Vergleichsdaten")
+                                session.circuit.reference == nil ? "Referenzrunde aufzeichnen" : "Warte auf gültige GPS-Vergleichsdaten",
+                            allowsTest: !session.circuitGPS.enabled)
                 Label(session.circuitGPSStatus, systemImage: "location.fill")
                     .font(.subheadline).foregroundStyle(.secondary)
                 if session.circuitGPS.enabled {
@@ -303,7 +307,7 @@ struct CircuitView: View {
                         session.startCircuit()
                     }.disabled(session.circuitGPS.gate == nil)
                 }
-                if let last = session.circuit.laps.last, let deviation = last.deviation {
+                if !focusMode, let last = session.circuit.laps.last, let deviation = last.deviation {
                     Panel {
                         VStack(spacing: 8) {
                             Eyebrow(text: "Letzte Runde · \(last.number)")
@@ -314,6 +318,15 @@ struct CircuitView: View {
                     }
                 }
                 if !focusMode {
+                    if session.circuit.reference != nil {
+                        Button {
+                            savedReference = session.saveCircuit()
+                        } label: {
+                            Label(savedReference ? "Referenzrunde gespeichert" : "Referenzrunde speichern", systemImage: savedReference ? "checkmark.circle.fill" : "square.and.arrow.down")
+                        }.frame(minHeight: 44)
+                        Text("Die Referenzzeit und ihr GPS-Vergleichsprofil werden nach Rundenende automatisch gespeichert und beim nächsten Start wiederverwendet.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     Text("Die Startlinie ist 50 m breit und liegt quer zur eingestellten Fahrtrichtung. Nach mindestens 75 m Entfernung und 10 Sekunden kann die nächste Überfahrt zählen. Die LED-Abweichung vergleicht Zeiten bei gleicher gefahrener Rundendistanz: Blau = voraus / zu schnell, Orange = zurück / zu langsam, Grün = ±0,5 s.")
                         .font(.footnote).foregroundStyle(.secondary)
                     if !session.circuit.laps.isEmpty {
@@ -334,28 +347,30 @@ struct CircuitView: View {
                     Text("Abgeschlossene Runden bleiben nach einem App-Neustart erhalten. Eine laufende Runde wird dabei verworfen. Die GPS-Messung ist unabhängig vom Tripmaster und dessen Demo-Modus. GPS-Lücken machen die aktuelle Runde ungültig; an Start/Ziel beginnt eine neue Runde. Keine offizielle Zeitnahme.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
-                if !session.circuitGPS.enabled && !session.circuit.laps.isEmpty {
+                if !focusMode && !session.circuitGPS.enabled && !session.circuit.laps.isEmpty {
                     Button("Neue Referenz / Runden löschen", role: .destructive) { confirmReset = true }
                         .frame(minHeight: 44)
                 }
             }.padding(20)
         }.background(RallyStyle.background)
             .navigationTitle("Rundstrecke").navigationBarTitleDisplayMode(.inline)
+            .modifier(DrivingFullscreen(enabled: $focusMode))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { focusMode.toggle() } label: {
-                        Label(focusMode ? "Alle Details" : "Fokus", systemImage: focusMode ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                    }.accessibilityLabel(focusMode ? "Alle Details anzeigen" : "Fokusmodus aktivieren")
+                        Label("Vollbild", systemImage: "arrow.up.left.and.arrow.down.right")
+                            .frame(minHeight: 44)
+                    }.accessibilityLabel("Vollbild aktivieren")
                 }
             }
             .onAppear { session.monitorCircuitGPS() }
             .onDisappear { session.stopCircuitPreview() }
-            .sheet(isPresented: $showGate) { CircuitGateEditor() }
+            .sheet(isPresented: $showGate, onDismiss: { savedReference = false }) { CircuitGateEditor() }
             .confirmationDialog("Messung beenden? Die laufende, unvollständige Runde wird verworfen.", isPresented: $confirmStop, titleVisibility: .visible) {
                 Button("Beenden", role: .destructive) { session.stopCircuit() }
             }
             .confirmationDialog("Alle Runden und die Referenzzeit löschen?", isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("Runden löschen", role: .destructive) { session.resetCircuit() }
+                Button("Runden löschen", role: .destructive) { session.resetCircuit(); savedReference = false }
             }
     }
 }
@@ -364,32 +379,55 @@ struct CircuitView: View {
 private struct CircuitLEDs: View {
     let deviation: Double?
     let status: String
+    var allowsTest = false
+    @State private var testing = false
     private var selected: Int? {
-        guard let deviation else { return nil }
+        guard let deviation, deviation.isFinite else { return nil }
         if abs(deviation) <= 0.5 { return 0 }
-        return (deviation < 0 ? -1 : 1) * min(4, max(1, Int(ceil(abs(deviation)))))
+        return (deviation < 0 ? -1 : 1) * max(1, Int(min(4, ceil(abs(deviation)))))
     }
     var body: some View {
-        Panel {
-            VStack(spacing: 12) {
-                Eyebrow(text: "Tempo gegenüber Referenzrunde")
+        VStack(spacing: 16) {
+                Text("Tempo gegenüber Referenzrunde").font(.subheadline.weight(.semibold))
                 HStack(spacing: 8) {
                     ForEach(-4...4, id: \.self) { index in
+                        let color: Color = index == 0 ? .green : index < 0 ? .cyan : .orange
+                        let lit = testing || selected.map { value in
+                            value == 0 ? index == 0 : (value < 0 ? (value...(-1)).contains(index) : (1...value).contains(index))
+                        } == true
                         Circle()
-                            .fill(selected == index ? (index == 0 ? Color.green : index < 0 ? Color.blue : Color.orange) : Color.secondary.opacity(0.18))
-                            .overlay(Circle().stroke(.secondary.opacity(0.25), lineWidth: 1))
+                            .fill(color.opacity(lit ? 1 : 0.22))
+                            .overlay(Circle().stroke(color.opacity(lit ? 1 : 0.6), lineWidth: lit ? 3 : 1))
+                            .overlay(Circle().fill(.white.opacity(lit ? 0.8 : 0)).padding(10))
+                            .shadow(color: color.opacity(lit ? 0.9 : 0), radius: 10)
                             .aspectRatio(1, contentMode: .fit)
                     }
-                }.frame(maxWidth: 420).accessibilityHidden(true)
-                if let deviation {
+                }.frame(maxWidth: 660).padding(.vertical, 12).accessibilityHidden(true)
+                HStack {
+                    Text("← Zu schnell").foregroundStyle(.cyan)
+                    Spacer()
+                    Text("±0,5 s").foregroundStyle(.green)
+                    Spacer()
+                    Text("Zu langsam →").foregroundStyle(.orange)
+                }.font(.caption.bold())
+                if testing {
+                    Text("Lampentest · keine Messwerte").font(.headline)
+                } else if let deviation, deviation.isFinite {
                     Text(abs(deviation) <= 0.5 ? "Im Takt" : deviation < 0 ? "Zu schnell · voraus" : "Zu langsam · zurück")
                         .font(.headline)
-                    Text("\(RallyFormat.deviation(deviation)) s").monospacedDigit()
+                    MeterValue("\(RallyFormat.deviation(deviation)) s", size: 48)
                 } else {
-                    Text(status).font(.subheadline).foregroundStyle(.secondary)
+                    Text(status).font(.subheadline)
+                    Text("LEDs bereit · noch kein Zeitvergleich").font(.caption)
                 }
-            }.frame(maxWidth: .infinity)
-        }.accessibilityElement(children: .combine)
+                if allowsTest {
+                    Button(testing ? "Lampentest beenden" : "LED-Lampentest") { testing.toggle() }
+                        .buttonStyle(.bordered).tint(.white).frame(minHeight: 44)
+                }
+        }.padding(20).frame(maxWidth: .infinity)
+            .foregroundStyle(.white)
+            .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 20))
+            .onChange(of: allowsTest) { _, allowed in if !allowed { testing = false } }
     }
 }
 
@@ -427,23 +465,23 @@ private struct CircuitGateEditor: View {
                         .font(.footnote)
                 }
                 Section {
-                    Text("Speichern setzt die bisherige Referenz und Rundenliste zurück. Der Punkt und die Richtung bleiben nach einem App-Neustart gespeichert.")
+                    Text("Die Zielkoordinate und Fahrtrichtung bleiben nach einem App-Neustart gespeichert. Nur eine Änderung von Punkt oder Richtung setzt die bisherige Referenz und Rundenliste zurück.")
                         .font(.footnote)
                 }
             }.navigationTitle("Start/Ziel")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Speichern") {
-                            if let gate { session.configureCircuit(gate); dismiss() }
+                        Button("Zielkoordinate speichern") {
+                            if let gate, session.configureCircuit(gate) { dismiss() }
                         }.disabled(gate == nil)
                     }
                 }
                 .onAppear {
                     if let gate = session.circuitGPS.gate {
-                        latitude = String(format: "%.7f", gate.latitude)
-                        longitude = String(format: "%.7f", gate.longitude)
-                        bearing = String(format: "%.0f", gate.bearing)
+                        latitude = String(gate.latitude)
+                        longitude = String(gate.longitude)
+                        bearing = String(gate.bearing)
                     }
                 }
         }

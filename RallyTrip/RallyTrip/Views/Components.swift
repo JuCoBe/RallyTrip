@@ -1,5 +1,27 @@
 import SwiftUI
 
+/// Retains safe areas and a reachable exit in portrait, landscape and large text sizes.
+struct DrivingFullscreen: ViewModifier {
+    @Binding var enabled: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar(enabled ? .hidden : .visible, for: .navigationBar, .tabBar)
+            .statusBarHidden(enabled)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if enabled {
+                    HStack {
+                        Spacer()
+                        Button { enabled = false } label: {
+                            Label("Vollbild beenden", systemImage: "arrow.down.right.and.arrow.up.left")
+                                .font(.headline).padding(.horizontal, 16).frame(minHeight: 44)
+                        }.buttonStyle(.bordered)
+                    }.padding(.horizontal).background(RallyStyle.background)
+                }
+            }
+    }
+}
+
 enum RallyStyle {
     static let accent = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark

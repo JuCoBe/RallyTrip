@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = name => fs.readFileSync(path.join(root, name), 'utf8');
-const pbx = read('RallyTrip.xcodeproj/project.pbxproj');
-const objects = [...pbx.matchAll(/^([A-F0-9]{24}) = /gm)].map(m => m[1]);
+// Xcode adds comments, indentation and line breaks when saving generated projects.
+const pbx = read('RallyTrip.xcodeproj/project.pbxproj').replace(/\/\*[\s\S]*?\*\//g, '');
+const objects = [...pbx.matchAll(/^\s*([A-F0-9]{24})\s*=\s*\{\s*isa\s*=/gm)].map(m => m[1]);
 assert.equal(new Set(objects).size, objects.length, 'Duplicate PBX identifiers');
 const references = [...pbx.matchAll(/\b[A-F0-9]{24}\b/g)].map(m => m[0]);
 for (const ref of references) assert(objects.includes(ref), `Dangling reference: ${ref}`);
@@ -19,11 +20,21 @@ const walk = dir => fs.readdirSync(path.join(root, dir), { withFileTypes: true }
 const sources = [...walk('Sources/RallyCore'), ...walk('RallyTrip')].filter(f => f.endsWith('.swift'));
 const watchSources = [...walk('RallyWatch').filter(f => f.endsWith('.swift')), 'Sources/RallyCore/WatchProtocol.swift'];
 const allSources = [...new Set([...sources, ...watchSources])];
-for (const file of allSources) assert(pbx.includes(`path = "${file}"`), `Source absent from project: ${file}`);
+for (const file of allSources) assert(pbx.includes(`path = "${file}"`) || pbx.includes(`path = ${file};`), `Source absent from project: ${file}`);
 const id = key => crypto.createHash('sha256').update(key).digest('hex').slice(0, 24).toUpperCase();
-const objectLine = key => pbx.split('\n').find(line => line.startsWith(`${id(key)} = `)) ?? '';
+const objectLine = key => {
+  const match = new RegExp(`${id(key)}\\s*=\\s*\\{\\s*isa\\s*=`).exec(pbx);
+  if (!match) return '';
+  const start = pbx.indexOf('{', match.index);
+  let depth = 0;
+  for (let i = start; i < pbx.length; i++) {
+    if (pbx[i] === '{') depth++;
+    if (pbx[i] === '}' && --depth === 0) return pbx.slice(start, i + 1);
+  }
+  throw new Error(`Unclosed project object: ${key}`);
+};
 for (const [key, prefix, expected] of [['sources', 'build', sources], ['watchSources', 'watchBuild', watchSources]]) {
-  const phase = objectLine(key).match(/files = \(([^)]+)\)/)?.[1].split(',').filter(Boolean) ?? [];
+  const phase = objectLine(key).match(/files = \(([^)]+)\)/)?.[1].split(',').map(value => value.trim()).filter(Boolean) ?? [];
   assert.deepEqual(new Set(phase), new Set(expected.map(file => id(`${prefix}:${file}`))), `${key}: incorrect target membership`);
 }
 assert(objectLine('target').includes(id('watchDependency')));
@@ -50,8 +61,8 @@ const watchIcon = fs.readFileSync(path.join(root, 'RallyWatch/Assets.xcassets/Ap
 assert.equal(watchIcon.readUInt32BE(16), 1024);
 assert.equal(watchIcon.readUInt32BE(20), 1024);
 const scheme = read('RallyTrip.xcodeproj/xcshareddata/xcschemes/RallyTrip.xcscheme');
-assert(scheme.includes('BlueprintName="RallyTrip"'));
-assert(read('RallyTrip.xcodeproj/xcshareddata/xcschemes/RallyWatch.xcscheme').includes('BlueprintName="RallyWatch"'));
+assert(/BlueprintName\s*=\s*"RallyTrip"/.test(scheme));
+assert(/BlueprintName\s*=\s*"RallyWatch"/.test(read('RallyTrip.xcodeproj/xcshareddata/xcschemes/RallyWatch.xcscheme')));
 const tests = walk('Tests').filter(f => f.endsWith('.swift'));
 const testCount = tests.reduce((count, file) => count + [...read(file).matchAll(/func test\w+\(/g)].length, 0);
 assert(testCount >= 27, 'Expected at least the baseline 27 XCTest cases');

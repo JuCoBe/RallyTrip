@@ -2,6 +2,46 @@ import XCTest
 @testable import RallyCore
 
 final class GPSCircuitTests: XCTestCase {
+    func testSavingUnchangedGatePreservesReferenceAndProfile() throws {
+        var engine = engine()
+        for i in -10...63 {
+            let time = Double(i + 10)
+            let fix = point(Double(i) * 0.1, time: time)
+            engine.ingest(fix, at: time, now: fix.timestamp)
+        }
+        engine.stop()
+        let gate = try XCTUnwrap(engine.gate)
+        let laps = engine.timer.laps
+        let profileCount = engine.reference.count
+        XCTAssertFalse(laps.isEmpty)
+        XCTAssertGreaterThan(profileCount, 2)
+        engine.configure(gate)
+        XCTAssertEqual(engine.timer.laps, laps)
+        XCTAssertEqual(engine.reference.count, profileCount)
+
+        let data = try JSONEncoder().encode(engine.archive)
+        var restored = GPSCircuitEngine(archive: try JSONDecoder().decode(CircuitGPSArchive.self, from: data))
+        XCTAssertEqual(restored.gate, gate)
+        XCTAssertEqual(restored.timer.reference, engine.timer.reference)
+        XCTAssertEqual(restored.reference.last?.meters, engine.reference.last?.meters)
+        XCTAssertEqual(restored.reference.last?.seconds, engine.reference.last?.seconds)
+        XCTAssertFalse(restored.timer.isRunning)
+        restored.start()
+        var sawComparison = false
+        for i in -10...40 {
+            let time = Double(i + 10) * 1.1
+            let fix = point(Double(i) * 0.1, time: time)
+            restored.ingest(fix, at: time, now: fix.timestamp)
+            if let delta = restored.deviation, delta > 0.5 { sawComparison = true }
+        }
+        XCTAssertTrue(sawComparison, "Stored GPS profile must drive the LEDs after restarting")
+        restored.stop()
+        restored.reset()
+        XCTAssertEqual(restored.gate, gate)
+        XCTAssertNil(restored.timer.reference)
+        XCTAssertTrue(restored.reference.isEmpty)
+    }
+
     private let epoch = Date(timeIntervalSince1970: 1700000000)
     private func point(_ phase: Double, time: Double, speed: Double = 10) -> GPSPoint {
         let scale = 180 / Double.pi / 6_371_000

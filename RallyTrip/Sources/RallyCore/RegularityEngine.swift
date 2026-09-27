@@ -180,6 +180,7 @@ public struct GPSCircuitEngine {
     public var archive: CircuitGPSArchive { .init(gate: gate, laps: timer.laps, reference: reference) }
     public mutating func configure(_ gate: CircuitGate) {
         guard !enabled, gate.isValid else { return }
+        guard self.gate != gate else { return }
         self = GPSCircuitEngine()
         self.gate = gate
     }
