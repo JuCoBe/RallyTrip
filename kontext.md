@@ -1,6 +1,6 @@
 # Kontext für KI-Agenten – RallyTrip
 
-Stand: 27. September 2026. Aktuelle Erweiterung: gemeinsame Regularity-/Circuit-LEDs und benannte Startpunkte/Referenzen auf Basis `cea552d`. Dieses Dokument ist eine Übergabe, kein Ersatz für Codeprüfung oder aktuelle Git-/Test-Ergebnisse.
+Stand: 27. September 2026. Aktuelle Erweiterung: gemeinsame Regularity-/Circuit-LEDs und benannte Startpunkte/Referenzen in `63caafa`. Dieses Dokument ist eine Übergabe, kein Ersatz für Codeprüfung oder aktuelle Git-/Test-Ergebnisse.
 
 ## Zuerst die richtige Arbeitskopie bestimmen
 
@@ -38,7 +38,7 @@ Namen und Auswahl: `NamedCircuitItem<Value>` verwendet UUID, Nummer und optional
 
 ## Verifiziert / noch offen
 
-- Aktuelle Erweiterung: 57 Core-Tests unter WSL erfolgreich; Syntax- und Projektstrukturprüfung erfolgreich. Neuer Apple-SDK-Build wird nach dem Push geprüft.
+- Aktuelle Erweiterung `63caafa`: 57 Core-Tests unter WSL und macOS erfolgreich; Syntax-/Projektstrukturprüfung, iPhone- und Watch-Simulator-Build erfolgreich. Beleg: https://github.com/JuCoBe/RallyTrip/actions/runs/36327997806. Keine neue visuelle oder reale GPS-Abnahme.
 
 - 27.09.: `swift test` in der aktiven App auf dem Mac: 49 Tests bestanden.
 - 27.09.: Apple-SDK-Simulator-Build von `7da94bd` erfolgreich und auf iPhone-17-Pro-Simulator gestartet; eingebettetes Watch-Target mitgebaut.

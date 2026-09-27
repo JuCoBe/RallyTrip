@@ -23,7 +23,7 @@ In Xcode das Scheme **RallyTrip**, einen iPhone-Simulator und **Run (⌘R)** aus
 - **Tripmaster:** unabhängige Total-/Trip-Zähler, GPS-Geschwindigkeit, Kalibrierung, Korrekturen, Trip-Reset mit Rückgängig und Fokusansicht.
 - **Regularity:** Schnittplan mit mehreren Geschwindigkeiten, geplanter Start, Zeitabweichung mit derselben LED-Komponente wie in der Rundstrecke, akustische Hinweise und Vollbild mit erreichbarem Ausstieg.
 - **Rundstrecke:** Start-/Zielkoordinate und Fahrtrichtung festlegen; gerichtete GPS-Überfahrten starten und beenden Runden automatisch. Die erste vollständige Runde setzt die Referenz.
-- **LED-Vergleich:** Blau = voraus, Orange = zurück, Grün = innerhalb ±0,5 s. Vergleich nach gleicher gemessener Rundendistanz; kein Vergleich identischer Kartenpositionen. Lampentest im Stillstand.
+- **LED-Vergleich:** Blau = voraus, Orange = zurück, Grün = innerhalb ±0,5 s. Rundstrecke vergleicht nach gleicher gemessener Rundendistanz, Regularity gegen die Schnittplan-Sollzeit an der aktuellen Distanz; kein Vergleich identischer Kartenpositionen. Lampentest im Stillstand.
 - **Speicherung:** Startpunkte und Referenzrunden mit optionalen Namen, Auswahl und nachträglichem Umbenennen. Alte Daten ohne Namen bleiben nutzbar. Zielkoordinate, Referenzzeit, Distanz-/Zeitprofil und abgeschlossene Runden bleiben erhalten; ein geänderter Startpunkt setzt nur die aktuellen Runden zurück, gespeicherte Referenzen bleiben auswählbar.
 - **Route:** Karte, manuelle Roadbook-Punkte, Fahrtarchiv und GPX-Export.
 - **Apple Watch:** Begleit-App für Anzeige und Fernsteuerung; reale Kommunikation und Bedienung müssen noch geprüft werden. Android liegt als Entwicklungsstand bei.
@@ -36,8 +36,8 @@ In Xcode das Scheme **RallyTrip**, einen iPhone-Simulator und **Run (⌘R)** aus
 
 ## Prüfstatus und Grenzen
 
-- Aktuelle Erweiterung: **57 Core-Tests unter WSL erfolgreich**; Apple-SDK-Buildstatus im [Prüfstand](RallyTrip/VALIDATION.md).
-- iPhone-Simulator-Build von `7da94bd` erfolgreich; App im iPhone-17-Pro-Simulator gestartet.
+- Aktuelle Erweiterung `63caafa`: **57 Core-Tests unter WSL und macOS erfolgreich**, iPhone- und Watch-Simulator-Build erfolgreich. [CI-Nachweis](https://github.com/JuCoBe/RallyTrip/actions/runs/36327997806), Details im [Prüfstand](RallyTrip/VALIDATION.md).
+- Vorheriger Stand `7da94bd` zusätzlich im iPhone-17-Pro-Simulator gestartet; die aktuelle Erweiterung wurde in CI kompiliert.
 - Vorherige GPS-/Demo-Version erfolgreich signiert, auf einem iPhone 13 Pro installiert und gestartet. Die neuesten Vollbild-/Speicheränderungen sind damit noch nicht auf dem echten Gerät abgenommen.
 - Offen: visuelle Prüfung, reale Rundstrecken-/GPS-Fahrt, Hintergrundverhalten, Watch-Gerätetest und TestFlight-Bereitstellung.
 
