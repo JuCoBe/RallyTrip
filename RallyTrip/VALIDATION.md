@@ -1,3 +1,10 @@
+## Lokale Prüfung und Dokumentationsabgleich, 27. September 2026
+
+- Aktive App `RallyTrip/`, Funktionsstand `7da94bd`: 49 Core-Tests auf macOS bestanden.
+- Apple-SDK-Build für iPhone 17 Pro / iOS 26.5 Simulator erfolgreich; App gestartet, Watch-Begleitapp mitgebaut.
+- Die zuvor als offen geführte Apple-SDK-Simulator-Kompilierung ist damit bestätigt. Visuelle Abnahme und reale Fahrprüfung bleiben offen.
+- Root-README, GitHub-Pages-Seite und `kontext.md` dokumentieren die aktive Unterordnerstruktur. Website-Download zeigt auf das aktuelle main-Archiv statt auf die historische ZIP.
+
 ## Vollbild und Rundstrecken-Speicherung, 27. September 2026
 
 - `swift test` mit Swift 6.3.3 unter WSL: **49 Tests erfolgreich, 0 Fehler**.

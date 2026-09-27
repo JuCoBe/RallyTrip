@@ -1,12 +1,14 @@
 # RallyTrip für iPhone
 
+**Aktive App im Unterordner `RallyTrip/` · Stand 27. September 2026.** Einstieg und aktuelle Prüfzusammenfassung: [Repository-README](../README.md). Hinweise für KI-Agenten: [kontext.md](../kontext.md).
+
 RallyTrip wurde mit künstlicher Intelligenz (OpenAI Codex) nach den Vorgaben und im Austausch mit dem Projektinhaber programmiert.
 
 Native SwiftUI-App für GPS-Tripmaster und Gleichmäßigkeitsprüfungen, ab iOS 17. Große Instrumente, deutsche Bedienoberfläche, native Tab-Navigation und adaptive helle/dunkle Systemfarben mit grünen Akzenten. Die App benötigt keine Drittanbieter-Pakete, kein Backend und keinen Account.
 
 ## Design- und Bedienungsupdate vom 25. September 2026
 
-- **Übersicht, Tripmaster, Regularity und Route** sind über native Tabs erreichbar. Kalibrierung und Einstellungen befinden sich in der Übersicht.
+- **Übersicht, Tripmaster, Regularity, Rundstrecke und Route** sind über native Tabs erreichbar. Kalibrierung und Einstellungen befinden sich in der Übersicht.
 - **System** folgt der iPhone-Darstellung und ist der Standard für neue Installationen. Bestehende Einstellungen für Hell, Dunkel und Nacht bleiben erhalten.
 - Die Instrumente skalieren mit Dynamic Type; wichtige zweispaltige Bereiche wechseln bei Bedienungshilfen-Schriftgrößen in eine Spalte. Schaltflächen verwenden native Zustände und große Berührungsflächen.
 - **Fokus** im Tripmaster blendet Fahrzeugdetails, Durchschnitt und Korrekturen aus. Total, Trip, GPS-Geschwindigkeit, Roadbook-Hinweis und Fahrtsteuerung bleiben erreichbar. **Alle Details** stellt die vollständige Ansicht wieder her.
@@ -21,7 +23,7 @@ Recherche, Quellen und Produktentscheidungen: [MARKET-RESEARCH.md](MARKET-RESEAR
 
 Im Demo-Modus lässt sich die simulierte Geschwindigkeit von 0 bis 200 km/h in 1-km/h-Schritten einstellen. Regler und Plus/Minus-Steuerung stehen in den Einstellungen sowie direkt in Tripmaster und Regularity zur Verfügung, auch während einer Demo-Fahrt. Der Wert bleibt gespeichert und wird nicht automatisch an den Sollschnitt angepasst; die Geschwindigkeitsanzeige verwendet weiterhin die GPS-Glättung.
 
-Regularity bietet wie der Tripmaster oben rechts **Fokus / Alle Details**. Fokus blendet Schnittplan, Distanz-/Zeitdetails und Erklärung aus. Zeitabweichung bzw. Countdown, Soll-/Istgeschwindigkeit, nächster Schnittwechsel, GPS-Status und Fahrtsteuerung bleiben verfügbar. Die Auswahl wird unabhängig vom Tripmaster gespeichert.
+Regularity und Rundstrecke bieten oben rechts **Vollbild** mit einem erreichbaren Ausstieg. Der Tripmaster behält seine Fokusansicht. Details stehen im folgenden Abschnitt.
 
 ## Vollbild, Zielkoordinate und Referenzrunde (27. September 2026)
 
@@ -32,7 +34,7 @@ Regularity bietet wie der Tripmaster oben rechts **Fokus / Alle Details**. Fokus
 
 ## Rundstrecke – GPS-Gleichmäßigkeit und Demo
 
-Im Tab **Rundstrecke** zunächst **Start/Ziel festlegen**: aktuelle GPS-Position übernehmen oder Breiten-/Längengrad eingeben; die Fahrtrichtung in Grad festlegen (0 Nord, 90 Ost). Speichern setzt Referenz und Rundenliste zurück. Die Startlinie ist 50 m breit und steht quer zur Fahrtrichtung. **GPS-Rundenerkennung starten** wartet auf eine Überfahrt in dieser Richtung. Zuvor mindestens 75 m vom Punkt entfernen; zwischen Überfahrten liegen mindestens 10 Sekunden. GPS-Punkte benötigen höchstens 20 m gemeldete Ungenauigkeit. Die Überfahrtszeit wird zwischen zwei GPS-Punkten interpoliert.
+Im Tab **Rundstrecke** zunächst **Start/Ziel festlegen**: aktuelle GPS-Position übernehmen oder Breiten-/Längengrad eingeben; die Fahrtrichtung in Grad festlegen (0 Nord, 90 Ost). Geänderte Zielkoordinaten oder Fahrtrichtung setzen Referenz und Rundenliste zurück; unverändertes Speichern erhält sie. Die Startlinie ist 50 m breit und steht quer zur Fahrtrichtung. **GPS-Rundenerkennung starten** wartet auf eine Überfahrt in dieser Richtung. Zuvor mindestens 75 m vom Punkt entfernen; zwischen Überfahrten liegen mindestens 10 Sekunden. GPS-Punkte benötigen höchstens 20 m gemeldete Ungenauigkeit. Die Überfahrtszeit wird zwischen zwei GPS-Punkten interpoliert.
 
 Die erste vollständige Runde setzt die Referenzzeit samt Distanz-/Zeitprofil. Jede weitere Überfahrt beendet die Runde und startet die nächste. Die LED-Anzeige vergleicht die Zeit bei gleicher gefahrener Rundendistanz: **blau = voraus / zu schnell**, **orange = zurück / zu langsam**, **grün = innerhalb ±0,5 s**. Das ist ein Vergleich nach GPS-Streckenlänge, kein Abgleich identischer Kartenpositionen und keine offizielle Zeitnahme. Abweichende Linien und GPS-Messfehler beeinflussen das Ergebnis.
 
@@ -42,7 +44,7 @@ Bei unbrauchbaren GPS-Daten oder Lücken über fünf Sekunden verschwindet der L
 
 ## Weitere Plattformen – Entwicklungsstand
 
-`RallyWatch/` enthält eine Apple-Watch-Begleit-App mit Anzeige und Fernbedienung der iPhone-Sitzung. Das Xcode-Projekt enthält das Watch-Target und bettet die Begleit-App ein. Ein erfolgreicher watchOS-Build und Tests mit gekoppelten Geräten stehen für diesen Stand noch aus.
+`RallyWatch/` enthält eine Apple-Watch-Begleit-App mit Anzeige und Fernbedienung der iPhone-Sitzung. Das Xcode-Projekt enthält das Watch-Target und bettet die Begleit-App ein. Die eingebettete Watch-App wurde beim erfolgreichen iPhone-Simulator-Build mitgebaut. Tests mit gekoppelten Geräten und eine eigenständige Watch-Abnahme stehen noch aus.
 
 Unter `android/` entsteht eine Android-Version. Die Dateien sind ein Entwicklungsstand; ein lauffähiges, geprüftes Android-Paket wird damit noch nicht zugesichert.
 
@@ -67,19 +69,15 @@ Voraussetzung sind die GitHub-Anmeldung für dieses Repository und der separat l
 5. Für ein echtes iPhone unter **Signing & Capabilities** dein Team auswählen und gegebenenfalls die Bundle-ID `de.rallytrip.app` durch eine eindeutige ID ersetzen. iPhone als Ziel auswählen und mit **⌘R** installieren.
 6. Auf dem iPhone Standortzugriff erlauben und **Genauer Standort** aktivieren.
 
-Ein signiertes Installationspaket ist nicht enthalten. Dieses Projekt wurde auf Windows erstellt; dort stehen weder der Apple-SDK-Build noch der iOS-Simulator zur Verfügung. Der tatsächliche iOS-Build und die Geräteprüfung sind noch offen.
+Ein signiertes Installationspaket ist nicht enthalten. Der aktuelle Apple-SDK-Simulator-Build wurde auf dem Mac erfolgreich ausgeführt. Eine vorherige GPS-/Demo-Version wurde auf dem iPhone 13 Pro installiert und gestartet; die reale Fahr- und Geräteabnahme des neuesten Stands bleibt offen.
 
 **Für TestFlight:** Seit dem 28. April 2026 verlangt Apple für Uploads Xcode 26 oder neuer mit dem iOS-26-SDK oder neuer. Xcode 26 benötigt mindestens macOS Sequoia 15.6. Die oben genannte Xcode-15-Untergrenze betrifft nur den lokalen Projektaufbau, nicht die heutige TestFlight-Veröffentlichung. Quellen: [Apple-Uploadvorgaben](https://developer.apple.com/news/upcoming-requirements/), [Xcode-Systemanforderungen](https://developer.apple.com/xcode/system-requirements).
 
 ## GitHub-Projektseite
 
-`docs/` enthält eine eigenständige, responsive Projektseite mit Funktionsübersicht, Quellcode-Download und Startanleitung. Sie benötigt keine Web-Abhängigkeiten. Die Beispielanzeige ist ausdrücklich als Illustration gekennzeichnet; die native iPhone-App läuft nicht im Browser.
+Die veröffentlichte Projektseite kommt aus **`docs/` im Repository-Hauptordner**, nicht aus dem Unterordner neben dieser README. Der Root-Workflow `.github/workflows/pages.yml` veröffentlicht Änderungen daran nach einem Push auf `main`/`master`.
 
-Lokal ansehen: `node scripts/preview-site.mjs`, anschließend `http://127.0.0.1:4173` öffnen.
-
-Zum Veröffentlichen die Projektdateien in das gewünschte GitHub-Repository hochladen und dort unter **Settings → Pages → Build and deployment → Source** die Option **GitHub Actions** auswählen. Der Workflow `.github/workflows/pages.yml` veröffentlicht `docs/` bei Änderungen auf `main` oder `master`; er kann auch manuell gestartet werden. Der tatsächliche Seitenlink erscheint nach erfolgreichem Lauf in der GitHub-Pages-Umgebung des Repositorys.
-
-Die Website verwendet relative Links und funktioniert deshalb auch unter einem Repository-Unterpfad. `pwsh -File scripts/package-project.ps1` erzeugt das aktuelle Downloadpaket und aktualisiert `docs/downloads/RallyTrip-iOS.zip`. Die ZIP enthält sich selbst nicht; nach dem Entpacken kann dieser Befehl den Website-Download wiederherstellen. Das Repository ist unter https://github.com/JuCoBe/RallyTrip veröffentlicht; die Projektseite unter https://jucobe.github.io/RallyTrip/.
+[Projektseite](https://jucobe.github.io/RallyTrip/) · [aktuelles Quellcode-Archiv](https://github.com/JuCoBe/RallyTrip/archive/refs/heads/main.zip). Nach dem Entpacken die aktive App unter `RallyTrip/RallyTrip.xcodeproj` öffnen. Historische ZIP-Dateien im Repository werden nicht mehr als aktueller Download verlinkt.
 
 ## Umgesetzter Funktionsumfang
 
