@@ -37,7 +37,7 @@ In Xcode das Scheme **RallyTrip**, einen iPhone-Simulator und **Run (⌘R)** aus
 
 ## Prüfstatus und Grenzen
 
-- Aktuelle Erweiterung `63caafa`: **57 Core-Tests unter WSL und macOS erfolgreich**, iPhone- und Watch-Simulator-Build erfolgreich. [CI-Nachweis](https://github.com/JuCoBe/RallyTrip/actions/runs/36327997806), Details im [Prüfstand](RallyTrip/VALIDATION.md).
+- Aktuelle Erweiterung `8f98571`: **63 Core-Tests unter WSL und macOS erfolgreich**, iPhone- und Watch-Simulator-Build erfolgreich. [CI-Nachweis](https://github.com/JuCoBe/RallyTrip/actions/runs/36330802246), Details im [Prüfstand](RallyTrip/VALIDATION.md).
 - Vorheriger Stand `7da94bd` zusätzlich im iPhone-17-Pro-Simulator gestartet; die aktuelle Erweiterung wurde in CI kompiliert.
 - Vorherige GPS-/Demo-Version erfolgreich signiert, auf einem iPhone 13 Pro installiert und gestartet. Die neuesten Vollbild-/Speicheränderungen sind damit noch nicht auf dem echten Gerät abgenommen.
 - Offen: visuelle Prüfung, reale Rundstrecken-/GPS-Fahrt, Hintergrundverhalten, Watch-Gerätetest und TestFlight-Bereitstellung.

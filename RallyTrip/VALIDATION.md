@@ -1,7 +1,7 @@
 ## Akustisches Feedback und Einstellungsmenü, 27. September 2026
 
 - 63 Core-Tests unter Swift 6.3.3 / WSL erfolgreich. Sechs neue Tests prüfen Tonkadenz und Grünbereich, Stummschaltung/fehlende Daten, Countdown-Priorität und Rundenwechsel, übersprungene Sekunden, Einstellungsdefaults/-persistenz/-umkehrung sowie PCM-Dateiaufbau, Frequenzen und Ausblendung der Töne.
-- Projektstrukturprüfung und Swift-Syntaxprüfung erfolgreich. Apple-SDK-Build wird nach dem Push geprüft.
+- Projektstrukturprüfung und Swift-Syntaxprüfung erfolgreich. [CI-Lauf 36330802246](https://github.com/JuCoBe/RallyTrip/actions/runs/36330802246) für `8f98571` erfolgreich: alle 63 Tests unter macOS, iPhone-Simulator-Build und eigenständiger Watch-Simulator-Build.
 - Bestehender AVSpeechSynthesizer wird für drei/zwei/eins wiederverwendet; kurze PCM-Töne kommen aus AVAudioPlayer. Beide Modi teilen sich denselben Scheduler und dieselben Ton-/Einstellungsmodelle. Neue App-Einstellungen sind optional, sodass Archive ohne diese Felder lesbar bleiben.
 - Noch auf iPhone testen: tatsächliche Lautstärke/Verständlichkeit, Lautsprecher und Bluetooth, Audio-Unterbrechungen, Master-Schalter und Tonumkehrung, Countdown in normaler Fahrt und beschleunigter Demo. Kein Hörtest oder visuelle Menü-Abnahme allein aus dem Build ableiten.
 

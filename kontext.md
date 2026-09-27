@@ -1,6 +1,6 @@
 # Kontext für KI-Agenten – RallyTrip
 
-Stand: 27. September 2026. Aktuelle Erweiterung: gemeinsame Regularity-/Circuit-LEDs und benannte Startpunkte/Referenzen in `63caafa`. Dieses Dokument ist eine Übergabe, kein Ersatz für Codeprüfung oder aktuelle Git-/Test-Ergebnisse.
+Stand: 27. September 2026. Aktuelle Erweiterung: einstellbare Abweichungstöne und Referenz-Zielcountdown in `8f98571`, auf Basis der gemeinsamen LEDs und benannten Einträge aus `63caafa`. Dieses Dokument ist eine Übergabe, kein Ersatz für Codeprüfung oder aktuelle Git-/Test-Ergebnisse.
 
 ## Zuerst die richtige Arbeitskopie bestimmen
 
@@ -40,7 +40,7 @@ Akustik: `RallyAudioFeedback` nutzt dieselbe Sekundenabweichung wie LEDs, Stille
 
 ## Verifiziert / noch offen
 
-- Akustik-Erweiterung: 63 Core-Tests unter WSL erfolgreich; Syntax-/Projektstrukturprüfung erfolgreich. Neuer Apple-SDK-Build nach Push ausstehend.
+- Akustik-Erweiterung `8f98571`: 63 Core-Tests unter WSL und macOS erfolgreich; Syntax-/Projektstrukturprüfung sowie iPhone- und Watch-Simulator-Build erfolgreich. Beleg: https://github.com/JuCoBe/RallyTrip/actions/runs/36330802246. Hörtest am iPhone/Bluetooth bleibt offen.
 
 - Aktuelle Erweiterung `63caafa`: 57 Core-Tests unter WSL und macOS erfolgreich; Syntax-/Projektstrukturprüfung, iPhone- und Watch-Simulator-Build erfolgreich. Beleg: https://github.com/JuCoBe/RallyTrip/actions/runs/36327997806. Keine neue visuelle oder reale GPS-Abnahme.
 
