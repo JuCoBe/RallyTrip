@@ -48,6 +48,13 @@ final class RallySession: ObservableObject {
 
     private let location = LocationEngine()
     private let speech = AVSpeechSynthesizer()
+    private var audioFeedback = RallyAudioFeedback()
+    private var highTone: AVAudioPlayer?
+    private var lowTone: AVAudioPlayer?
+    private var audioSessionReady = false
+    private var audioInterrupted = false
+    private var speakingCountdown = false
+    private var audioInterruption: AnyCancellable?
     private var filter = DistanceEngine()
     private let monotonic = ContinuousClock()
     private let epoch = ContinuousClock.now
@@ -90,7 +97,18 @@ final class RallySession: ObservableObject {
     }
 
     init() {
-        speech.usesApplicationAudioSession = false
+        speech.usesApplicationAudioSession = true
+        audioInterruption = NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
+            .receive(on: DispatchQueue.main).sink { [weak self] notification in
+                guard let self,
+                      let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+                let options = AVAudioSession.InterruptionOptions(rawValue:
+                    notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0)
+                self.audioInterrupted = type == .began || !options.contains(.shouldResume)
+                self.audioSessionReady = false
+                self.stopGuidanceAudio(stopSpeech: true)
+            }
         do {
             data = try RallyStore.load()
             _ = try RegularityEngine(segments: data.settings.segments)
@@ -187,10 +205,92 @@ final class RallySession: ObservableObject {
     }
 
     private func speak(_ message: String) {
-        guard data.settings.sound else { return }
+        if let remaining = circuitCountdownRemaining, remaining > 0, remaining <= 3 { return }
+        guard data.settings.sound, !audioInterrupted, prepareAudioSession() else { return }
+        highTone?.stop(); lowTone?.stop()
+        speakingCountdown = false
         let utterance = AVSpeechUtterance(string: message)
         utterance.voice = AVSpeechSynthesisVoice(language: "de-DE")
         speech.speak(utterance)
+    }
+
+    private func prepareAudioSession() -> Bool {
+        if audioSessionReady { return true }
+        do {
+            let audio = AVAudioSession.sharedInstance()
+            try audio.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try audio.setActive(true)
+            if highTone == nil { highTone = try AVAudioPlayer(data: RallyTone.wave(high: true)) }
+            if lowTone == nil { lowTone = try AVAudioPlayer(data: RallyTone.wave(high: false)) }
+            highTone?.prepareToPlay(); lowTone?.prepareToPlay()
+            audioSessionReady = true
+            return true
+        } catch {
+            notice = "Tonausgabe nicht verfügbar: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    private func stopGuidanceAudio(stopSpeech: Bool) {
+        audioFeedback.reset()
+        highTone?.stop(); lowTone?.stop()
+        if stopSpeech { speech.stopSpeaking(at: .immediate) }
+        speakingCountdown = false
+    }
+
+    func audioSettingsChanged() {
+        stopGuidanceAudio(stopSpeech: true)
+        if data.settings.sound { audioInterrupted = false; audioSessionReady = false }
+        persist()
+    }
+
+    private var circuitCountdownRemaining: Double? {
+        guard circuitGPS.enabled, circuit.isRunning, circuitGPS.lapValid,
+              circuitDemo || circuitFix != nil, data.settings.feedbackSounds.finishCountdown else { return nil }
+        return circuit.reference.map { $0 - circuit.elapsed(at: circuitNow) }
+    }
+
+    private func updateAudioFeedback() {
+        // Independent measurements may run together. Circuit cues take priority, never mix directions.
+        let inCircuit = circuitGPS.enabled
+        let preferences = data.settings.feedbackSounds
+        let validCircuit = circuitGPS.lapValid && (circuitDemo || circuitFix != nil)
+        let validRegularity = stageActive && state == .running && accuracy != nil
+        let enabled = data.settings.sound && !audioInterrupted && (inCircuit ? validCircuit : validRegularity)
+        guard enabled else {
+            stopGuidanceAudio(stopSpeech: !data.settings.sound || speakingCountdown)
+            return
+        }
+        let remaining = circuitCountdownRemaining
+        let counting = remaining.map { $0 > 0 && $0 <= 3 } ?? false
+        if speakingCountdown && !counting {
+            speech.stopSpeaking(at: .immediate); speakingCountdown = false
+        }
+        let deviation = preferences.deviationBeeps
+            ? (inCircuit ? circuitGPS.deviation : PaceLED.regularityDeviation(result, isLive: validRegularity)) : nil
+        let cue = audioFeedback.update(now: now, mode: inCircuit ? .circuit : .regularity,
+                                       enabled: enabled, deviation: deviation,
+                                       lap: inCircuit ? circuit.lapStartedAt : nil, remaining: remaining)
+        switch cue {
+        case .countdown(let number):
+            guard prepareAudioSession() else { return }
+            highTone?.stop(); lowTone?.stop()
+            speech.stopSpeaking(at: .immediate)
+            let utterance = AVSpeechUtterance(string: [1: "eins", 2: "zwei", 3: "drei"][number] ?? "")
+            utterance.voice = AVSpeechSynthesisVoice(language: "de-DE")
+            utterance.rate = circuitDemo ? min(0.85, 0.5 + Float(circuitDemoRate - 1) * 0.08) : 0.5
+            speakingCountdown = true
+            speech.speak(utterance)
+        case .beep(let late):
+            guard !speech.isSpeaking, !speech.isPaused, prepareAudioSession() else { return }
+            let player = preferences.usesHighTone(late: late) ? highTone : lowTone
+            player?.currentTime = 0
+            player?.play()
+        case nil:
+            if deviation == nil || PaceLED.position(deviation: deviation) == 0 {
+                highTone?.stop(); lowTone?.stop()
+            }
+        }
     }
 
     func startTrip() {
@@ -229,6 +329,7 @@ final class RallySession: ObservableObject {
     }
 
     private func beginStage(at instant: Double) {
+        audioInterrupted = false
         stageOrigin = meter.total
         stageDistance = 0
         stageClock.start(at: instant)
@@ -332,7 +433,7 @@ final class RallySession: ObservableObject {
     }
 
     private func tick() {
-        defer { watchBridge.publish() }
+        defer { updateAudioFeedback(); watchBridge.publish() }
         let instant = now
         if circuitDemo, circuitGPS.enabled {
             let dt = max(0, instant - (circuitDemoTick ?? instant))
@@ -525,12 +626,16 @@ extension RallySession {
         return true
     }
     func startCircuit() {
+        guard !circuitGPS.enabled, circuitGPS.gate != nil else { return }
+        audioInterrupted = false
+        stopGuidanceAudio(stopSpeech: true)
         if circuitDemo {
             circuitDemoClock = 0; circuitDemoPhase = -.pi / 2; circuitDemoTick = now
         }
         circuitGPS.start(); monitorCircuitGPS(); updateIdleTimer()
     }
     func stopCircuit() {
+        stopGuidanceAudio(stopSpeech: speakingCountdown)
         circuitGPS.stop(); saveCircuit(); updateIdleTimer()
     }
     func resetCircuit() {

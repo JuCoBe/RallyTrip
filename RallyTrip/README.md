@@ -25,6 +25,16 @@ Im Demo-Modus lässt sich die simulierte Geschwindigkeit von 0 bis 200 km/h in 1
 
 Regularity und Rundstrecke bieten oben rechts **Vollbild** mit einem erreichbaren Ausstieg. Der Tripmaster behält seine Fokusansicht. Details stehen im folgenden Abschnitt.
 
+## Akustisches Feedback
+
+Unter **Einstellungen → Signale → Akustisches Feedback** lässt sich die Tonzuordnung wählen: standardmäßig **zu langsam = hoch (1.000 Hz)** und **zu schnell = tief (400 Hz)**, auf Wunsch umgekehrt. Abweichungspiepen und Rundstrecken-Countdown lassen sich dort einzeln ausschalten. Der bestehende Hauptschalter **Akustische Hinweise** schaltet alle Ansagen und Töne aus. Die Einstellungen bleiben nach einem Neustart erhalten; alte Einstellungen verwenden die Standardzuordnung.
+
+Beide Modi verwenden dieselbe Zeitabweichung wie ihre LEDs. Innerhalb **±0,5 s** bleibt es ruhig. Außerhalb wird der Tonabstand mit zunehmender Abweichung kürzer: etwa **1,5 s bei 1 s Abweichung**, **0,5 s bei 3 s**, bis minimal **0,2 s ab 7,5 s**. Die Töne dauern 90 ms und werden lokal erzeugt.
+
+Die Rundstrecke spricht **„drei, zwei, eins“** in den letzten drei Sekunden vor **Rundenstart + gespeicherter Referenzzeit**. Gemeint ist die geplante Zielzeit, nicht eine aus der aktuellen Geschwindigkeit geschätzte GPS-Überfahrt. Ohne Referenz oder bei einer ungültigen GPS-Runde gibt es keinen Countdown. Jede Zahl wird pro Runde höchstens einmal angesagt; nach Unterbrechungen werden verpasste Zahlen nicht nachgeholt. Die Demo beschleunigt den Countdown entsprechend ihrem Zeitraffer; die Abweichungspieptöne behalten ihre reale Tonfolge.
+
+Countdown-Ansagen haben Vorrang vor Piepen und Schnittwechselansagen. Bei gleichzeitig laufenden Messungen kommen die Abweichungstöne aus der Rundstrecke. Bei Pause/fehlenden Messdaten verstummt die betroffene Abweichungsanzeige. Die Lautstärke folgt der Medienlautstärke des iPhones; Audio-Unterbrechungen werden beachtet. Für den sekundengenauen Countdown die App im Vordergrund geöffnet lassen: iOS garantiert keine regelmäßigen Timer-Aufrufe bei suspendierter App.
+
 ## Gemeinsame LEDs und benannte Startpunkte / Referenzen
 
 Regularity und Rundstrecke verwenden dieselbe LED-Anzeige mit identischen Farben, Grenzen und Lampentest. Im Regularity-Tab ist die Referenz die aus dem Schnittplan errechnete Sollzeit an der aktuellen Prüfungsdistanz: **Istzeit minus Sollzeit**, in Sekunden. Positiv bedeutet zurück / zu spät, negativ voraus / zu früh. Vor dem Start, bei Messpause oder fehlendem GPS bleibt der Livevergleich aus.

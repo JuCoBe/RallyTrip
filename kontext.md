@@ -26,6 +26,8 @@ Koordinate, Referenzzeit, Profil und abgeschlossene Runden werden gespeichert. I
 
 Namen und Auswahl: `NamedCircuitItem<Value>` verwendet UUID, Nummer und optionalen Namen im bestehenden `CircuitGPSArchive`. Alte aktive Daten werden zu Startpunkt 1 / Referenzrunde 1 migriert. Referenzpayload enthält bestehende CircuitGate/CircuitLap/Trace-Modelle. Umbenennen ändert nur Metadaten. „Neue Referenz aufzeichnen“ erhält gespeicherte Referenzen; Reset/Löschen entfernt nur die betroffene Referenz. Namenseingabe, Auswahl und Rename-Dialog sind gemeinsame UI-Komponenten; `changeCircuit` speichert Änderungen mit Rücknahme bei Speicherfehlern. Demo/Real bleiben getrennt.
 
+Akustik: `RallyAudioFeedback` nutzt dieselbe Sekundenabweichung wie LEDs, Stille bei ±0,5 s, 1,5–0,2 s Tonabstand je nach Abweichung. `RallyTone` erzeugt 90-ms-PCM-Töne (hoch 1.000 Hz, tief 400 Hz). `RallyAudioPreferences` und optionale AppSettings-Felder speichern umkehrbare Zuordnung plus eigene Schalter für Piepen/Countdown. Menü: Einstellungen → Signale → Akustisches Feedback. Referenz-Countdown drei/zwei/eins bei Rundenstart + Referenzzeit, nur gültige Circuit-Runde, keine nachgeholten Zahlen. Bestehender Synthesizer, gemeinsamer Audio-Scheduler, Circuit-Vorrang bei paralleler Messung. Hardware-/Bluetooth-Hörtest offen; Vordergrundtimer ist keine Garantie im suspendierten Zustand.
+
 ## Wichtige Implementierungsstellen
 
 - `RallyTrip/Sources/RallyCore/RegularityEngine.swift`: RegularityEngine, CircuitTimer, CircuitGate, GPSCircuitEngine, Archive und Referenzprofil.
@@ -37,6 +39,8 @@ Namen und Auswahl: `NamedCircuitItem<Value>` verwendet UUID, Nummer und optional
 - `RallyTrip/RallyTrip/Views/SettingsView.swift`: Einstellungen und Demo-Geschwindigkeit.
 
 ## Verifiziert / noch offen
+
+- Akustik-Erweiterung: 63 Core-Tests unter WSL erfolgreich; Syntax-/Projektstrukturprüfung erfolgreich. Neuer Apple-SDK-Build nach Push ausstehend.
 
 - Aktuelle Erweiterung `63caafa`: 57 Core-Tests unter WSL und macOS erfolgreich; Syntax-/Projektstrukturprüfung, iPhone- und Watch-Simulator-Build erfolgreich. Beleg: https://github.com/JuCoBe/RallyTrip/actions/runs/36327997806. Keine neue visuelle oder reale GPS-Abnahme.
 

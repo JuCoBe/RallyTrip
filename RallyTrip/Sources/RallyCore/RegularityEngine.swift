@@ -196,6 +196,87 @@ public enum PaceLED {
     }
 }
 
+/// Persisted options; absent fields retain the defaults for older settings.
+public struct RallyAudioPreferences: Codable, Equatable {
+    public var highToneWhenEarly = false
+    public var deviationBeeps = true
+    public var finishCountdown = true
+    public init() {}
+    private enum CodingKeys: String, CodingKey { case highToneWhenEarly, deviationBeeps, finishCountdown }
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        highToneWhenEarly = try values.decodeIfPresent(Bool.self, forKey: .highToneWhenEarly) ?? false
+        deviationBeeps = try values.decodeIfPresent(Bool.self, forKey: .deviationBeeps) ?? true
+        finishCountdown = try values.decodeIfPresent(Bool.self, forKey: .finishCountdown) ?? true
+    }
+    public func usesHighTone(late: Bool) -> Bool { highToneWhenEarly ? !late : late }
+}
+
+/// A single scheduler for both modes. Pacing uses real monotonic time, even in accelerated demos.
+public struct RallyAudioFeedback {
+    public enum Mode { case regularity, circuit }
+    public enum Cue: Equatable { case beep(late: Bool), countdown(Int) }
+    private var mode: Mode?
+    private var lap: Double?
+    private var lastCount = 4
+    private var lastBeep: Double?
+    private var lastDirection: Bool?
+
+    public init() {}
+    public mutating func reset() { self = Self() }
+
+    public static func interval(deviation: Double) -> Double {
+        max(0.2, 1.5 / max(1, abs(deviation)))
+    }
+
+    public mutating func update(now: Double, mode: Mode, enabled: Bool, deviation: Double?,
+                                lap: Double? = nil, remaining: Double? = nil) -> Cue? {
+        guard enabled, now.isFinite else { reset(); return nil }
+        if self.mode != mode { reset(); self.mode = mode }
+        if self.lap != lap { self.lap = lap; lastCount = 4 }
+        // Say only the current second, never replay missed numbers after suspension or GPS loss.
+        if mode == .circuit, lap != nil, let remaining, remaining.isFinite, remaining > 0, remaining <= 3 {
+            lastBeep = now
+            let count = Int(ceil(remaining))
+            if count < lastCount { lastCount = count; return .countdown(count) }
+            return nil // Countdown has priority over deviation beeps.
+        }
+        guard let deviation, let position = PaceLED.position(deviation: deviation), position != 0 else {
+            lastBeep = nil; lastDirection = nil; return nil
+        }
+        let late = deviation > 0
+        let interval = late == lastDirection ? Self.interval(deviation: deviation) : 0.2
+        if let lastBeep, now - lastBeep < interval { return nil }
+        lastBeep = now
+        lastDirection = late
+        return .beep(late: late)
+    }
+}
+
+/// Short PCM tones generated locally, with a fade at both ends to avoid clicks.
+public enum RallyTone {
+    public static func wave(high: Bool) -> Data {
+        let sampleRate = 44_100
+        let samples = 3_969 // 90 ms
+        let frequency = high ? 1_000.0 : 400.0
+        var data = Data()
+        func text(_ value: String) { data.append(contentsOf: value.utf8) }
+        func word(_ value: UInt16) {
+            data.append(UInt8(value & 255)); data.append(UInt8(value >> 8))
+        }
+        func dword(_ value: UInt32) { word(UInt16(value & 65535)); word(UInt16(value >> 16)) }
+        text("RIFF"); dword(UInt32(36 + samples * 2)); text("WAVEfmt ")
+        dword(16); word(1); word(1); dword(UInt32(sampleRate)); dword(UInt32(sampleRate * 2))
+        word(2); word(16); text("data"); dword(UInt32(samples * 2))
+        for index in 0..<samples {
+            let fade = min(1, Double(min(index, samples - 1 - index)) / 220)
+            let value = Int16(12_000 * fade * sin(2 * .pi * frequency * Double(index) / Double(sampleRate)))
+            word(UInt16(bitPattern: value))
+        }
+        return data
+    }
+}
+
 /// A 50 m wide start/finish line perpendicular to the configured travel direction.
 public struct GPSCircuitEngine {
     public private(set) var timer = CircuitTimer()

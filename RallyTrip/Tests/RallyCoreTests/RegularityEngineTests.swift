@@ -2,6 +2,95 @@ import XCTest
 @testable import RallyCore
 
 final class RegularityEngineTests: XCTestCase {
+    func testAudioCadenceFollowsMagnitudeAndLEDDeadband() {
+        var audio = RallyAudioFeedback()
+        XCTAssertNil(audio.update(now: 0, mode: .regularity, enabled: true, deviation: 0.5))
+        XCTAssertEqual(audio.update(now: 0, mode: .regularity, enabled: true, deviation: 1), .beep(late: true))
+        XCTAssertNil(audio.update(now: 1.4, mode: .regularity, enabled: true, deviation: 1))
+        XCTAssertEqual(audio.update(now: 1.5, mode: .regularity, enabled: true, deviation: 1), .beep(late: true))
+        XCTAssertEqual(audio.update(now: 2, mode: .regularity, enabled: true, deviation: 3), .beep(late: true))
+        XCTAssertNil(audio.update(now: 2.1, mode: .regularity, enabled: true, deviation: -10))
+        XCTAssertEqual(audio.update(now: 2.21, mode: .regularity, enabled: true, deviation: -10), .beep(late: false))
+        XCTAssertEqual(RallyAudioFeedback.interval(deviation: 1), 1.5)
+        XCTAssertEqual(RallyAudioFeedback.interval(deviation: 3), 0.5)
+        XCTAssertEqual(RallyAudioFeedback.interval(deviation: 100), 0.2)
+        XCTAssertEqual(RallyAudioFeedback.interval(deviation: -100), 0.2)
+        XCTAssertNil(audio.update(now: 3, mode: .regularity, enabled: true, deviation: -0.5))
+    }
+
+    func testAudioSilencesOnDisableMissingGPSAndNonfiniteDeviation() {
+        var audio = RallyAudioFeedback()
+        XCTAssertNil(audio.update(now: 0, mode: .circuit, enabled: false, deviation: 8, lap: 0, remaining: 3))
+        XCTAssertNil(audio.update(now: 1, mode: .regularity, enabled: true, deviation: nil))
+        XCTAssertNil(audio.update(now: 2, mode: .regularity, enabled: true, deviation: .nan))
+        XCTAssertNil(audio.update(now: 3, mode: .regularity, enabled: true, deviation: .infinity))
+        XCTAssertEqual(audio.update(now: 4, mode: .regularity, enabled: true, deviation: -1), .beep(late: false))
+        XCTAssertNil(audio.update(now: 4.1, mode: .regularity, enabled: false, deviation: -1))
+        XCTAssertEqual(audio.update(now: 4.2, mode: .regularity, enabled: true, deviation: -1), .beep(late: false))
+    }
+
+    func testCircuitCountdownSaysEachSecondOnceAndOverridesBeeps() {
+        var audio = RallyAudioFeedback()
+        XCTAssertEqual(audio.update(now: 7, mode: .circuit, enabled: true, deviation: 10, lap: 0, remaining: 3), .countdown(3))
+        XCTAssertNil(audio.update(now: 7.1, mode: .circuit, enabled: true, deviation: 10, lap: 0, remaining: 2.9))
+        XCTAssertEqual(audio.update(now: 8, mode: .circuit, enabled: true, deviation: -10, lap: 0, remaining: 2), .countdown(2))
+        XCTAssertEqual(audio.update(now: 9, mode: .circuit, enabled: true, deviation: 10, lap: 0, remaining: 1), .countdown(1))
+        XCTAssertNil(audio.update(now: 9.9, mode: .circuit, enabled: true, deviation: 10, lap: 0, remaining: 0.1))
+        XCTAssertEqual(audio.update(now: 10.2, mode: .circuit, enabled: true, deviation: 10, lap: 0, remaining: -0.2), .beep(late: true))
+        XCTAssertEqual(audio.update(now: 17, mode: .circuit, enabled: true, deviation: nil, lap: 10, remaining: 3), .countdown(3))
+    }
+
+    func testCountdownSkipsMissedSecondsAndRequiresCircuitLap() {
+        var audio = RallyAudioFeedback()
+        XCTAssertNil(audio.update(now: 0, mode: .regularity, enabled: true, deviation: nil, lap: 0, remaining: 3))
+        XCTAssertNil(audio.update(now: 1, mode: .circuit, enabled: true, deviation: nil, remaining: 3))
+        XCTAssertNil(audio.update(now: 2, mode: .circuit, enabled: true, deviation: nil, lap: 0, remaining: nil))
+        XCTAssertEqual(audio.update(now: 3, mode: .circuit, enabled: true, deviation: nil, lap: 0, remaining: 1.4), .countdown(2))
+        XCTAssertNil(audio.update(now: 4, mode: .circuit, enabled: true, deviation: nil, lap: 0, remaining: -1))
+        XCTAssertNil(audio.update(now: 5, mode: .circuit, enabled: true, deviation: nil, lap: 0, remaining: .nan))
+        XCTAssertEqual(audio.update(now: 6, mode: .circuit, enabled: true, deviation: nil, lap: 5, remaining: 3), .countdown(3))
+    }
+
+    func testAudioPreferencesDefaultsMigrationReversalAndPersistence() throws {
+        var settings = try JSONDecoder().decode(RallyAudioPreferences.self, from: Data("{}".utf8))
+        XCTAssertTrue(settings.deviationBeeps)
+        XCTAssertTrue(settings.finishCountdown)
+        XCTAssertTrue(settings.usesHighTone(late: true))
+        XCTAssertFalse(settings.usesHighTone(late: false))
+        settings.highToneWhenEarly = true
+        settings.deviationBeeps = false
+        settings.finishCountdown = false
+        let restored = try JSONDecoder().decode(RallyAudioPreferences.self, from: JSONEncoder().encode(settings))
+        XCTAssertEqual(restored, settings)
+        XCTAssertTrue(restored.usesHighTone(late: false))
+        XCTAssertFalse(restored.usesHighTone(late: true))
+    }
+
+    func testGeneratedTonesHaveDistinctPitchesAndClickFreePCMEnvelope() {
+        func samples(_ data: Data) -> [Int16] {
+            stride(from: 44, to: data.count, by: 2).map {
+                Int16(bitPattern: UInt16(data[$0]) | (UInt16(data[$0 + 1]) << 8))
+            }
+        }
+        let highData = RallyTone.wave(high: true)
+        let lowData = RallyTone.wave(high: false)
+        XCTAssertEqual(String(data: highData.prefix(4), encoding: .utf8), "RIFF")
+        XCTAssertEqual(String(data: highData[8..<12], encoding: .utf8), "WAVE")
+        XCTAssertEqual(highData.count, 44 + 3969 * 2)
+        XCTAssertEqual(lowData.count, highData.count)
+        let high = samples(highData), low = samples(lowData)
+        for tone in [high, low] {
+            XCTAssertEqual(tone.first, 0)
+            XCTAssertEqual(tone.last, 0)
+            XCTAssertLessThanOrEqual(tone.map { abs(Int($0)) }.max() ?? 0, 12000)
+        }
+        func crossings(_ tone: [Int16]) -> Int {
+            zip(tone, tone.dropFirst()).filter { $0 <= 0 && $1 > 0 }.count
+        }
+        XCTAssertEqual(crossings(high), 90)
+        XCTAssertEqual(crossings(low), 36)
+    }
+
     func testSharedLEDScalePreservesCircuitThresholdsAndRejectsUnavailableValues() {
         XCTAssertNil(PaceLED.position(deviation: nil))
         XCTAssertNil(PaceLED.position(deviation: .nan))

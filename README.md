@@ -2,7 +2,7 @@
 
 Native SwiftUI-App für iPhone ab iOS 17: GPS-Tripmaster, Gleichmäßigkeitsprüfungen und automatische Rundstrecken-Zeitnahme. Deutsche Oberfläche, lokale Speicherung, kein Backend und kein App-Account.
 
-**Stand: 27. September 2026 · Gemeinsame LEDs und benannte Referenzen/Startpunkte.**
+**Stand: 27. September 2026 · Gemeinsame LEDs, benannte Referenzen/Startpunkte und einstellbares akustisches Feedback.**
 
 [Projektseite](https://jucobe.github.io/RallyTrip/) · [Aktuellen Quellcode herunterladen](https://github.com/JuCoBe/RallyTrip/archive/refs/heads/main.zip) · [KI-Kontext](kontext.md) · [Ausführliche Anleitung](RallyTrip/README.md) · [Prüfstand](RallyTrip/VALIDATION.md)
 
@@ -25,6 +25,7 @@ In Xcode das Scheme **RallyTrip**, einen iPhone-Simulator und **Run (⌘R)** aus
 - **Rundstrecke:** Start-/Zielkoordinate und Fahrtrichtung festlegen; gerichtete GPS-Überfahrten starten und beenden Runden automatisch. Die erste vollständige Runde setzt die Referenz.
 - **LED-Vergleich:** Blau = voraus, Orange = zurück, Grün = innerhalb ±0,5 s. Rundstrecke vergleicht nach gleicher gemessener Rundendistanz, Regularity gegen die Schnittplan-Sollzeit an der aktuellen Distanz; kein Vergleich identischer Kartenpositionen. Lampentest im Stillstand.
 - **Speicherung:** Startpunkte und Referenzrunden mit optionalen Namen, Auswahl und nachträglichem Umbenennen. Alte Daten ohne Namen bleiben nutzbar. Zielkoordinate, Referenzzeit, Distanz-/Zeitprofil und abgeschlossene Runden bleiben erhalten; ein geänderter Startpunkt setzt nur die aktuellen Runden zurück, gespeicherte Referenzen bleiben auswählbar.
+- **Akustisches Feedback:** Countdown drei/zwei/eins bis zur Referenz-Zielzeit in der Rundstrecke, abweichungsabhängiges Piepen in beiden Modi. Tonzuordnung und einzelne Signale sind unter Einstellungen → Akustisches Feedback konfigurierbar.
 - **Route:** Karte, manuelle Roadbook-Punkte, Fahrtarchiv und GPX-Export.
 - **Apple Watch:** Begleit-App für Anzeige und Fernsteuerung; reale Kommunikation und Bedienung müssen noch geprüft werden. Android liegt als Entwicklungsstand bei.
 

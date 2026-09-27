@@ -14,7 +14,8 @@ struct SettingsView: View {
                 Toggle("Bildschirm während der Fahrt anlassen", isOn: $session.data.settings.keepAwake)
             }
             Section("Signale") {
-                Toggle("Akustische Schnittwechsel-Hinweise", isOn: $session.data.settings.sound)
+                Toggle("Akustische Hinweise", isOn: $session.data.settings.sound)
+                NavigationLink("Akustisches Feedback") { AudioFeedbackSettingsView() }
                 Toggle("Haptisches Feedback", isOn: $session.data.settings.haptics)
             }
             Section("Apple Watch") {
@@ -58,6 +59,42 @@ struct SettingsView: View {
             .toolbar(.visible, for: .navigationBar)
             .onDisappear { session.persist(); session.updateIdleTimer() }
             .onChange(of: session.data.settings.keepAwake) { _, _ in session.updateIdleTimer() }
+            .onChange(of: session.data.settings.sound) { _, _ in session.audioSettingsChanged() }
+    }
+}
+
+private struct AudioFeedbackSettingsView: View {
+    @EnvironmentObject private var session: RallySession
+    var body: some View {
+        Form {
+            if !session.data.settings.sound {
+                Section {
+                    Button("Akustische Hinweise einschalten") { session.data.settings.sound = true }
+                        .frame(minHeight: 44)
+                    Text("Die Tonausgabe ist derzeit ausgeschaltet.").font(.caption)
+                }
+            }
+            Section("Regularity und Rundstrecke") {
+                Toggle("Abweichung durch Piepen melden", isOn: $session.data.settings.feedbackSounds.deviationBeeps)
+                Picker("Tonzuordnung", selection: $session.data.settings.feedbackSounds.highToneWhenEarly) {
+                    Text("Zu langsam: hoch · zu schnell: tief").tag(false)
+                    Text("Zu schnell: hoch · zu langsam: tief").tag(true)
+                }.pickerStyle(.inline)
+                Text("Je größer die Zeitabweichung, desto schneller das Piepen: etwa alle 1,5 s bei 1 s Abweichung, alle 0,5 s bei 3 s und alle 0,2 s ab 7,5 s. Innerhalb ±0,5 s und ohne gültige Messdaten bleibt es ruhig.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Rundstrecke") {
+                Toggle("Ziel-Countdown: drei, zwei, eins", isOn: $session.data.settings.feedbackSounds.finishCountdown)
+                Text("Die letzten drei Sekunden bis Rundenstart + Referenzzeit werden angesagt. Der Countdown hat Vorrang vor Pieptönen und Schnittwechselansagen. Ohne Referenz oder bei ungültiger GPS-Runde erfolgt keine Ansage. In der Demo läuft er mit dem Zeitraffer.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section {
+                Text("Bei gleichzeitig laufender Regularity- und Rundstreckenmessung hat die Rundstrecke Vorrang. Die Lautstärke stellst du über die Medienlautstärke des iPhones ein.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }.navigationTitle("Akustisches Feedback").navigationBarTitleDisplayMode(.inline)
+            .onChange(of: session.data.settings.feedbackSounds) { _, _ in session.audioSettingsChanged() }
+            .onChange(of: session.data.settings.sound) { _, _ in session.audioSettingsChanged() }
     }
 }
 

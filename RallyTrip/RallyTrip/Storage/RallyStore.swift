@@ -3,6 +3,11 @@ import Foundation
 struct AppSettings: Codable {
     var theme = "System"
     var sound = true
+    var acousticFeedback: RallyAudioPreferences?
+    var feedbackSounds: RallyAudioPreferences {
+        get { acousticFeedback ?? RallyAudioPreferences() }
+        set { acousticFeedback = newValue }
+    }
     var haptics = true
     var keepAwake = true
     var profiles = [CalibrationProfile(name: "Mein Fahrzeug")]
