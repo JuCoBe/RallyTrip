@@ -1,3 +1,11 @@
+## Gemeinsame LEDs und benannte Einträge, 27. September 2026
+
+- 57 Core-Tests unter Swift 6.3.3 / WSL erfolgreich, darunter acht neue Tests für LED-Grenzen, Regularity-Zuordnung, alte Archive ohne Namensfelder, dauerhafte Namen/IDs, Umbenennen ohne Messwertverlust, Standardnamen, Mehrfachauswahl und isoliertes Löschen. Alle bisherigen Rundstrecken-/GPS-Tests bestehen unverändert.
+- Ein erster Testlauf deckte einen instabilen Testvergleich von JSON-Bytes auf (Reihenfolge von Objektschlüsseln). Der Test vergleicht jetzt die tatsächlichen Zeit-/Distanzwerte; es war kein Fehler der Messdaten.
+- Projektstrukturprüfung erfolgreich (74 Objekte, 17 iPhone-/4 Watch-Quellen); Swift-Syntaxprüfung der geänderten App-Dateien erfolgreich.
+- Der aktive Root-Workflow `.github/workflows/ios.yml` verwendet nun `RallyTrip/` als Arbeitsverzeichnis und prüft somit die aktuelle App. Apple-SDK-Ergebnis wird nach dem Push hier ergänzt.
+- Visuelle iPhone-/Simulator-Abnahme und reale GPS-Fahrt bleiben offen. Prüfen: LEDs in beiden Tabs vor/während WP und bei Pause/GPS-Verlust; Namen speichern/ändern/leeren, App neu starten, Einträge auswählen, Demo/Real wechseln, selektiv löschen; große Schrift und Vollbild.
+
 ## Lokale Prüfung und Dokumentationsabgleich, 27. September 2026
 
 - Aktive App `RallyTrip/`, Funktionsstand `7da94bd`: 49 Core-Tests auf macOS bestanden.

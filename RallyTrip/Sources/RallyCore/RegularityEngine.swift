@@ -153,6 +153,47 @@ public struct CircuitGPSArchive: Codable {
     public var gate: CircuitGate?
     public var laps: [CircuitLap]
     public var reference: [CircuitTracePoint]
+    // Optional fields preserve decoding of archives written before named entries existed.
+    public var startPoints: [NamedCircuitItem<CircuitGate>]? = nil
+    public var references: [NamedCircuitItem<CircuitReference>]? = nil
+    public var selectedStartPointID: UUID? = nil
+    public var selectedReferenceID: UUID? = nil
+}
+
+/// One naming and identity model for both lists; measurements remain in their existing models.
+public struct NamedCircuitItem<Value: Codable>: Codable, Identifiable {
+    public let id: UUID
+    public let number: Int
+    public var name: String?
+    public var value: Value
+
+    public init(value: Value, number: Int, name: String? = nil) {
+        id = UUID(); self.number = number; self.value = value
+        self.name = Self.normalized(name)
+    }
+    public static func normalized(_ name: String?) -> String? {
+        guard let text = name?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
+        return text
+    }
+    public func displayName(_ kind: String) -> String { Self.normalized(name) ?? "\(kind) \(number)" }
+}
+
+public struct CircuitReference: Codable {
+    public let gate: CircuitGate
+    public let lap: CircuitLap
+    public let profile: [CircuitTracePoint]
+}
+
+/// Both modes supply elapsed minus target seconds at the same travelled distance.
+public enum PaceLED {
+    public static func position(deviation: Double?) -> Int? {
+        guard let deviation, deviation.isFinite else { return nil }
+        if abs(deviation) <= 0.5 { return 0 }
+        return (deviation < 0 ? -1 : 1) * max(1, Int(min(4, ceil(abs(deviation)))))
+    }
+    public static func regularityDeviation(_ result: RegularityResult, isLive: Bool) -> Double? {
+        isLive && result.deviation.isFinite ? result.deviation : nil
+    }
 }
 
 /// A 50 m wide start/finish line perpendicular to the configured travel direction.
@@ -163,6 +204,14 @@ public struct GPSCircuitEngine {
     public private(set) var deviation: Double?
     public private(set) var lapValid = true
     public private(set) var reference: [CircuitTracePoint] = []
+    public private(set) var startPoints: [NamedCircuitItem<CircuitGate>] = []
+    public private(set) var references: [NamedCircuitItem<CircuitReference>] = []
+    public private(set) var selectedStartPointID: UUID?
+    public private(set) var selectedReferenceID: UUID?
+    public var selectedStartPoint: NamedCircuitItem<CircuitGate>? { startPoints.first { $0.id == selectedStartPointID } }
+    public var selectedReference: NamedCircuitItem<CircuitReference>? { references.first { $0.id == selectedReferenceID } }
+    public var startPointName: String { selectedStartPoint?.displayName("Startpunkt") ?? "Startpunkt 1" }
+    public var referenceName: String { selectedReference?.displayName("Referenzrunde") ?? "Referenzrunde 1" }
     private var trace: [CircuitTracePoint] = []
     private var distance = 0.0
     private var filter = DistanceEngine()
@@ -175,14 +224,26 @@ public struct GPSCircuitEngine {
             gate = archive.gate?.isValid == true ? archive.gate : nil
             timer = CircuitTimer(laps: archive.laps)
             reference = archive.reference
+            startPoints = archive.startPoints ?? []
+            references = archive.references ?? []
+            selectedStartPointID = archive.selectedStartPointID
+            selectedReferenceID = archive.selectedReferenceID
+            // Migrate legacy active data without starting a timer or changing any measurement.
+            if let gate { registerStartPoint(gate) }
+            registerReference()
         }
     }
-    public var archive: CircuitGPSArchive { .init(gate: gate, laps: timer.laps, reference: reference) }
+    public var archive: CircuitGPSArchive {
+        .init(gate: gate, laps: timer.laps, reference: reference,
+              startPoints: startPoints, references: references,
+              selectedStartPointID: selectedStartPointID, selectedReferenceID: selectedReferenceID)
+    }
     public mutating func configure(_ gate: CircuitGate) {
         guard !enabled, gate.isValid else { return }
         guard self.gate != gate else { return }
-        self = GPSCircuitEngine()
+        clearCurrentLaps()
         self.gate = gate
+        registerStartPoint(gate)
     }
     public mutating func start() {
         guard gate?.isValid == true, !enabled else { return }
@@ -193,9 +254,82 @@ public struct GPSCircuitEngine {
         enabled = false; timer.stop(); previous = nil; deviation = nil
     }
     public mutating func reset() {
-        let savedGate = gate
-        self = GPSCircuitEngine()
-        gate = savedGate
+        guard !enabled else { return }
+        references.removeAll { $0.id == selectedReferenceID }
+        clearCurrentLaps()
+    }
+    @discardableResult
+    public mutating func prepareNewReference() -> Bool {
+        guard !enabled, gate != nil else { return false }
+        clearCurrentLaps()
+        return true
+    }
+
+    private mutating func clearCurrentLaps() {
+        timer.reset(); reference = []; selectedReferenceID = nil
+        trace = []; distance = 0; filter = DistanceEngine(); previous = nil
+        armed = false; lastCrossing = nil; deviation = nil; lapValid = true
+    }
+    private mutating func registerStartPoint(_ gate: CircuitGate) {
+        if let item = startPoints.first(where: { $0.value == gate }) { selectedStartPointID = item.id; return }
+        let item = NamedCircuitItem(value: gate, number: (startPoints.map(\.number).max() ?? 0) + 1)
+        startPoints.append(item); selectedStartPointID = item.id
+    }
+    private mutating func registerReference() {
+        guard let gate, let lap = timer.laps.first, selectedReference == nil else { return }
+        let value = CircuitReference(gate: gate, lap: lap, profile: reference)
+        let item = NamedCircuitItem(value: value, number: (references.map(\.number).max() ?? 0) + 1)
+        references.append(item); selectedReferenceID = item.id
+    }
+
+    @discardableResult
+    public mutating func saveStartPoint(_ gate: CircuitGate, name: String?) -> Bool {
+        guard !enabled, gate.isValid else { return false }
+        configure(gate)
+        registerStartPoint(gate)
+        guard let id = selectedStartPointID else { return false }
+        return renameStartPoint(id, name: name)
+    }
+    @discardableResult
+    public mutating func saveReference(name: String?) -> Bool {
+        registerReference()
+        guard let id = selectedReferenceID else { return false }
+        return renameReference(id, name: name)
+    }
+    @discardableResult
+    public mutating func renameStartPoint(_ id: UUID, name: String?) -> Bool {
+        guard let index = startPoints.firstIndex(where: { $0.id == id }) else { return false }
+        startPoints[index].name = NamedCircuitItem<CircuitGate>.normalized(name)
+        return true
+    }
+    @discardableResult
+    public mutating func renameReference(_ id: UUID, name: String?) -> Bool {
+        guard let index = references.firstIndex(where: { $0.id == id }) else { return false }
+        references[index].name = NamedCircuitItem<CircuitReference>.normalized(name)
+        return true
+    }
+    @discardableResult
+    public mutating func selectStartPoint(_ id: UUID) -> Bool {
+        guard !enabled, let item = startPoints.first(where: { $0.id == id }), item.value.isValid else { return false }
+        configure(item.value); selectedStartPointID = id
+        return true
+    }
+    @discardableResult
+    public mutating func selectReference(_ id: UUID) -> Bool {
+        guard !enabled, let item = references.first(where: { $0.id == id }), item.value.gate.isValid else { return false }
+        guard id != selectedReferenceID else { return true }
+        clearCurrentLaps()
+        gate = item.value.gate; registerStartPoint(item.value.gate)
+        timer = CircuitTimer(laps: [item.value.lap]); reference = item.value.profile
+        selectedReferenceID = id
+        return true
+    }
+    @discardableResult
+    public mutating func deleteReference(_ id: UUID) -> Bool {
+        guard !enabled, references.contains(where: { $0.id == id }) else { return false }
+        if selectedReferenceID == id { clearCurrentLaps() }
+        references.removeAll { $0.id == id }
+        return true
     }
     public mutating func interrupt() {
         if timer.isRunning { lapValid = false }
@@ -231,6 +365,7 @@ public struct GPSCircuitEngine {
                                                         seconds: timer.elapsed(at: crossing))
                             if timer.reference == nil { reference = trace + [end] }
                             timer.completeLap(at: crossing)
+                            registerReference()
                         } else {
                             // Incomplete GPS laps never become a reference or a result.
                             timer.stop(); timer.start(at: crossing)

@@ -2,7 +2,7 @@
 
 Native SwiftUI-App für iPhone ab iOS 17: GPS-Tripmaster, Gleichmäßigkeitsprüfungen und automatische Rundstrecken-Zeitnahme. Deutsche Oberfläche, lokale Speicherung, kein Backend und kein App-Account.
 
-**Stand: 27. September 2026 · Funktionsbasis `7da94bd`.**
+**Stand: 27. September 2026 · Gemeinsame LEDs und benannte Referenzen/Startpunkte.**
 
 [Projektseite](https://jucobe.github.io/RallyTrip/) · [Aktuellen Quellcode herunterladen](https://github.com/JuCoBe/RallyTrip/archive/refs/heads/main.zip) · [KI-Kontext](kontext.md) · [Ausführliche Anleitung](RallyTrip/README.md) · [Prüfstand](RallyTrip/VALIDATION.md)
 
@@ -21,10 +21,10 @@ In Xcode das Scheme **RallyTrip**, einen iPhone-Simulator und **Run (⌘R)** aus
 ## Funktionen
 
 - **Tripmaster:** unabhängige Total-/Trip-Zähler, GPS-Geschwindigkeit, Kalibrierung, Korrekturen, Trip-Reset mit Rückgängig und Fokusansicht.
-- **Regularity:** Schnittplan mit mehreren Geschwindigkeiten, geplanter Start, Zeitabweichung, akustische Hinweise und Vollbild mit erreichbarem Ausstieg.
+- **Regularity:** Schnittplan mit mehreren Geschwindigkeiten, geplanter Start, Zeitabweichung mit derselben LED-Komponente wie in der Rundstrecke, akustische Hinweise und Vollbild mit erreichbarem Ausstieg.
 - **Rundstrecke:** Start-/Zielkoordinate und Fahrtrichtung festlegen; gerichtete GPS-Überfahrten starten und beenden Runden automatisch. Die erste vollständige Runde setzt die Referenz.
 - **LED-Vergleich:** Blau = voraus, Orange = zurück, Grün = innerhalb ±0,5 s. Vergleich nach gleicher gemessener Rundendistanz; kein Vergleich identischer Kartenpositionen. Lampentest im Stillstand.
-- **Speicherung:** Zielkoordinate, Referenzzeit, Distanz-/Zeitprofil und abgeschlossene Runden bleiben erhalten. Unverändertes Start/Ziel erhält die Referenz; geänderte Werte setzen sie zurück.
+- **Speicherung:** Startpunkte und Referenzrunden mit optionalen Namen, Auswahl und nachträglichem Umbenennen. Alte Daten ohne Namen bleiben nutzbar. Zielkoordinate, Referenzzeit, Distanz-/Zeitprofil und abgeschlossene Runden bleiben erhalten; ein geänderter Startpunkt setzt nur die aktuellen Runden zurück, gespeicherte Referenzen bleiben auswählbar.
 - **Route:** Karte, manuelle Roadbook-Punkte, Fahrtarchiv und GPX-Export.
 - **Apple Watch:** Begleit-App für Anzeige und Fernsteuerung; reale Kommunikation und Bedienung müssen noch geprüft werden. Android liegt als Entwicklungsstand bei.
 
@@ -36,7 +36,7 @@ In Xcode das Scheme **RallyTrip**, einen iPhone-Simulator und **Run (⌘R)** aus
 
 ## Prüfstatus und Grenzen
 
-- Aktueller Stand: **49 Core-Tests auf dem Mac erfolgreich**.
+- Aktuelle Erweiterung: **57 Core-Tests unter WSL erfolgreich**; Apple-SDK-Buildstatus im [Prüfstand](RallyTrip/VALIDATION.md).
 - iPhone-Simulator-Build von `7da94bd` erfolgreich; App im iPhone-17-Pro-Simulator gestartet.
 - Vorherige GPS-/Demo-Version erfolgreich signiert, auf einem iPhone 13 Pro installiert und gestartet. Die neuesten Vollbild-/Speicheränderungen sind damit noch nicht auf dem echten Gerät abgenommen.
 - Offen: visuelle Prüfung, reale Rundstrecken-/GPS-Fahrt, Hintergrundverhalten, Watch-Gerätetest und TestFlight-Bereitstellung.

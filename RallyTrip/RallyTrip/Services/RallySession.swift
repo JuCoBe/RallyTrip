@@ -516,11 +516,11 @@ extension RallySession {
         guard !circuitGPS.enabled else { return }
         circuitMonitoring = false; circuitLocation.stop(); circuitFix = nil
     }
+    /// All edits use the same archive and roll back if persistence fails.
     @discardableResult
-    func configureCircuit(_ gate: CircuitGate) -> Bool {
-        guard !circuitGPS.enabled, gate.isValid else { return false }
+    func changeCircuit(_ change: (inout GPSCircuitEngine) -> Bool) -> Bool {
         let previous = circuitGPS
-        circuitGPS.configure(gate)
+        guard change(&circuitGPS) else { circuitGPS = previous; return false }
         guard saveCircuit() else { circuitGPS = previous; return false }
         return true
     }
@@ -533,7 +533,11 @@ extension RallySession {
     func stopCircuit() {
         circuitGPS.stop(); saveCircuit(); updateIdleTimer()
     }
-    func resetCircuit() { circuitGPS.reset(); saveCircuit(); updateIdleTimer() }
+    func resetCircuit() {
+        guard !circuitGPS.enabled else { return }
+        changeCircuit { $0.reset(); return true }
+        updateIdleTimer()
+    }
     @discardableResult
     func saveCircuit() -> Bool {
         do {

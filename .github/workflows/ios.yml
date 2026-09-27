@@ -3,8 +3,13 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   verify:
     runs-on: macos-15
+    defaults:
+      run:
+        working-directory: RallyTrip
     steps:
       - uses: actions/checkout@v4
+      - name: Verify active project structure
+        run: node scripts/verify-project.mjs
       - name: Core calculations and GPS filtering
         run: swift test
       - name: Compile iPhone app

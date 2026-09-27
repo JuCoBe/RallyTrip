@@ -2,6 +2,30 @@ import XCTest
 @testable import RallyCore
 
 final class RegularityEngineTests: XCTestCase {
+    func testSharedLEDScalePreservesCircuitThresholdsAndRejectsUnavailableValues() {
+        XCTAssertNil(PaceLED.position(deviation: nil))
+        XCTAssertNil(PaceLED.position(deviation: .nan))
+        XCTAssertNil(PaceLED.position(deviation: .infinity))
+        for value in [-0.5, 0, 0.5] { XCTAssertEqual(PaceLED.position(deviation: value), 0) }
+        XCTAssertEqual(PaceLED.position(deviation: -0.51), -1)
+        XCTAssertEqual(PaceLED.position(deviation: 0.51), 1)
+        XCTAssertEqual(PaceLED.position(deviation: -2.1), -3)
+        XCTAssertEqual(PaceLED.position(deviation: 2.1), 3)
+        XCTAssertEqual(PaceLED.position(deviation: -Double.greatestFiniteMagnitude), -4)
+        XCTAssertEqual(PaceLED.position(deviation: Double.greatestFiniteMagnitude), 4)
+    }
+
+    func testRegularityMapsElapsedMinusPlanSecondsToSharedLEDs() throws {
+        let engine = try RegularityEngine(segments: [.init(startMeters: 0, speedKPH: 36), .init(startMeters: 1000, speedKPH: 72)])
+        // 100 seconds for the first km, then 50 seconds for the second km.
+        let late = engine.evaluate(distance: 2000, elapsed: 152.1)
+        let early = engine.evaluate(distance: 2000, elapsed: 147.9)
+        XCTAssertEqual(try XCTUnwrap(PaceLED.regularityDeviation(late, isLive: true)), 2.1, accuracy: 0.0001)
+        XCTAssertEqual(PaceLED.position(deviation: PaceLED.regularityDeviation(late, isLive: true)), 3)
+        XCTAssertEqual(PaceLED.position(deviation: PaceLED.regularityDeviation(early, isLive: true)), -3)
+        XCTAssertNil(PaceLED.regularityDeviation(late, isLive: false), "Pause, missing GPS or no active stage must not light live pace LEDs")
+    }
+
     func testEightKilometersAt48TakesTenMinutes() throws {
         let engine = try RegularityEngine(segments: [.init(startMeters: 0, speedKPH: 48)])
         let result = engine.evaluate(distance: 8000, elapsed: 601.24)

@@ -14,10 +14,6 @@ struct RegularityView: View {
         if session.accuracy == nil { return "GPS prüfen" }
         return abs(result.deviation) <= 0.5 ? "Im Takt" : result.deviation > 0 ? "Zu spät" : "Zu früh"
     }
-    private var deltaColor: Color {
-        abs(result.deviation) <= 0.5 ? RallyStyle.accent : (result.deviation > 0 ? .primary : .blue)
-    }
-
     var body: some View {
         ScrollView {
             VStack(spacing: focusMode ? 12 : 16) {
@@ -37,27 +33,10 @@ struct RegularityView: View {
                             Text("App bis zum Start geöffnet lassen.").font(.caption)
                         }.frame(maxWidth: .infinity)
                     }
-                } else {
-                    Panel {
-                        VStack(spacing: 16) {
-                            Eyebrow(text: session.stageActive ? "Zeitabweichung" : "Prüfung bereit")
-                            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                MeterValue(hasLivePace ? RallyFormat.deviation(result.deviation) : "—", size: 66)
-                                Text("s").font(.title2)
-                            }.foregroundStyle(hasLivePace ? deltaColor : .primary)
-                                .accessibilityElement(children: .ignore)
-                                .accessibilityLabel(hasLivePace ? "Zeitabweichung \(RallyFormat.deviation(result.deviation)) Sekunden" : "Zeitabweichung nicht verfügbar")
-                            Text(paceStatus)
-                                .font(.headline)
-                                .foregroundStyle(hasLivePace ? deltaColor : .secondary)
-                            HStack(spacing: 5) {
-                                ForEach(-7...7, id: \.self) { value in
-                                    Capsule().fill(barColor(value)).frame(height: value == 0 ? 22 : 12)
-                                }
-                            }.accessibilityHidden(true)
-                        }.frame(maxWidth: .infinity).padding(.vertical, 12)
-                    }
                 }
+                PaceLEDs(deviation: PaceLED.regularityDeviation(result, isLive: hasLivePace),
+                         title: "Tempo gegenüber Schnittplan", status: paceStatus,
+                         allowsTest: !session.stageActive && session.state != .scheduled)
                 AdaptiveRow {
                     Panel(accent: true) { Instrument(label: "Sollschnitt", value: RallyFormat.decimal(result.targetSpeed, digits: 1), unit: "km/h", size: 38) }
                     Panel { Instrument(label: "Ist · GPS", value: session.accuracy == nil ? "—" : RallyFormat.decimal(session.speed, digits: 1), unit: "km/h", size: 38) }
@@ -154,10 +133,7 @@ struct RegularityView: View {
             }
     }
 
-    private func barColor(_ value: Int) -> Color {
-        let position = min(7, max(-7, Int(result.deviation.rounded())))
-        return hasLivePace && value == position ? deltaColor : Color.secondary.opacity(0.2)
-    }
+
 }
 
 private struct SegmentDraft: Identifiable {
@@ -228,6 +204,7 @@ struct CircuitView: View {
     @State private var confirmStop = false
     @State private var confirmReset = false
     @State private var savedReference = false
+    @State private var referenceName = ""
     @AppStorage("circuitFocusMode") private var focusMode = false
 
     private var elapsed: Double { session.circuit.elapsed(at: session.circuitNow) }
@@ -266,7 +243,7 @@ struct CircuitView: View {
                         MeterValue(lapTime(elapsed), size: focusMode ? 80 : 60)
                             .accessibilityLabel("Rundenzeit \(lapTime(elapsed))")
                         if let reference = session.circuit.reference {
-                            Text("Referenz: \(lapTime(reference))").monospacedDigit()
+                            Text("\(session.circuitGPS.referenceName): \(lapTime(reference))").monospacedDigit()
                             if session.circuit.isRunning {
                                 Text(elapsed <= reference ? "Noch bis zur Referenzzeit" : "Referenzzeit überschritten")
                                     .font(.subheadline)
@@ -278,7 +255,7 @@ struct CircuitView: View {
                         }
                     }.frame(maxWidth: .infinity)
                 }
-                CircuitLEDs(deviation: session.circuitGPS.deviation,
+                PaceLEDs(deviation: session.circuitGPS.deviation,
                             status: !session.circuitGPS.lapValid ? "GPS-Lücke · Runde wird verworfen" :
                                 session.circuit.reference == nil ? "Referenzrunde aufzeichnen" : "Warte auf gültige GPS-Vergleichsdaten",
                             allowsTest: !session.circuitGPS.enabled)
@@ -300,6 +277,7 @@ struct CircuitView: View {
                     }.frame(minHeight: 44)
                     }
                     if let gate = session.circuitGPS.gate {
+                        Text(session.circuitGPS.startPointName).font(.headline)
                         Text(String(format: "%.6f, %.6f · Richtung %.0f°", gate.latitude, gate.longitude, gate.bearing))
                             .font(.caption).monospacedDigit()
                     }
@@ -318,9 +296,29 @@ struct CircuitView: View {
                     }
                 }
                 if !focusMode {
+                    if !session.circuitGPS.startPoints.isEmpty {
+                        NamedCircuitMenu(items: session.circuitGPS.startPoints,
+                                         selectedID: session.circuitGPS.selectedStartPointID, kind: "Startpunkt",
+                                         canSelect: !session.circuitGPS.enabled && !session.circuitDemo,
+                                         select: { id in session.changeCircuit { $0.selectStartPoint(id) } },
+                                         rename: { id, name in session.changeCircuit { $0.renameStartPoint(id, name: name) } })
+                    }
+                    if !session.circuitGPS.references.isEmpty {
+                        NamedCircuitMenu(items: session.circuitGPS.references,
+                                         selectedID: session.circuitGPS.selectedReferenceID, kind: "Referenzrunde",
+                                         canSelect: !session.circuitGPS.enabled,
+                                         select: { id in session.changeCircuit { $0.selectReference(id) } },
+                                         rename: { id, name in session.changeCircuit { $0.renameReference(id, name: name) } },
+                                         delete: { id in session.changeCircuit { $0.deleteReference(id) } })
+                        Text("Eine andere Referenz lädt auch ihren Startpunkt. Beim Wechsel bleiben gespeicherte Referenzen erhalten; die aktuellen Vergleichsrunden werden zurückgesetzt.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     if session.circuit.reference != nil {
+                        OptionalNameField(placeholder: "Referenzrunde \(session.circuitGPS.selectedReference?.number ?? 1)",
+                                          text: $referenceName)
+                            .textFieldStyle(.roundedBorder)
                         Button {
-                            savedReference = session.saveCircuit()
+                            savedReference = session.changeCircuit { $0.saveReference(name: referenceName) }
                         } label: {
                             Label(savedReference ? "Referenzrunde gespeichert" : "Referenzrunde speichern", systemImage: savedReference ? "checkmark.circle.fill" : "square.and.arrow.down")
                         }.frame(minHeight: 44)
@@ -337,7 +335,7 @@ struct CircuitView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Runde \(lap.number) · \(lapTime(lap.seconds))")
                                             .font(.headline).monospacedDigit()
-                                        Text(lap.deviation.map { "\(RallyFormat.deviation($0)) s · + langsamer / − schneller" } ?? "Referenzrunde")
+                                        Text(lap.deviation.map { "\(RallyFormat.deviation($0)) s · + langsamer / − schneller" } ?? session.circuitGPS.referenceName)
                                             .font(.subheadline).foregroundStyle(.secondary)
                                     }.accessibilityElement(children: .combine)
                                 }
@@ -348,7 +346,10 @@ struct CircuitView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 if !focusMode && !session.circuitGPS.enabled && !session.circuit.laps.isEmpty {
-                    Button("Neue Referenz / Runden löschen", role: .destructive) { confirmReset = true }
+                    Button("Neue Referenz aufzeichnen", systemImage: "flag.checkered") {
+                        if session.changeCircuit({ $0.prepareNewReference() }) { session.startCircuit() }
+                    }.frame(minHeight: 44)
+                    Button("Aktuelle Referenz / Runden löschen", role: .destructive) { confirmReset = true }
                         .frame(minHeight: 44)
                 }
             }.padding(20)
@@ -364,72 +365,25 @@ struct CircuitView: View {
                 }
             }
             .onAppear { session.monitorCircuitGPS() }
+            .onChange(of: session.circuitGPS.selectedReferenceID, initial: true) { _, _ in
+                referenceName = session.circuitGPS.selectedReference?.name ?? ""
+                savedReference = false
+            }
+            .onChange(of: session.circuitGPS.selectedReference?.name) { _, name in referenceName = name ?? "" }
+            .onChange(of: referenceName) { _, name in
+                if NamedCircuitItem<CircuitReference>.normalized(name) != session.circuitGPS.selectedReference?.name { savedReference = false }
+            }
             .onDisappear { session.stopCircuitPreview() }
             .sheet(isPresented: $showGate, onDismiss: { savedReference = false }) { CircuitGateEditor() }
             .confirmationDialog("Messung beenden? Die laufende, unvollständige Runde wird verworfen.", isPresented: $confirmStop, titleVisibility: .visible) {
                 Button("Beenden", role: .destructive) { session.stopCircuit() }
             }
-            .confirmationDialog("Alle Runden und die Referenzzeit löschen?", isPresented: $confirmReset, titleVisibility: .visible) {
+            .confirmationDialog("Aktuelle Referenz und ihre Vergleichsrunden löschen? Andere gespeicherte Referenzen bleiben erhalten.", isPresented: $confirmReset, titleVisibility: .visible) {
                 Button("Runden löschen", role: .destructive) { session.resetCircuit(); savedReference = false }
             }
     }
 }
 
-
-private struct CircuitLEDs: View {
-    let deviation: Double?
-    let status: String
-    var allowsTest = false
-    @State private var testing = false
-    private var selected: Int? {
-        guard let deviation, deviation.isFinite else { return nil }
-        if abs(deviation) <= 0.5 { return 0 }
-        return (deviation < 0 ? -1 : 1) * max(1, Int(min(4, ceil(abs(deviation)))))
-    }
-    var body: some View {
-        VStack(spacing: 16) {
-                Text("Tempo gegenüber Referenzrunde").font(.subheadline.weight(.semibold))
-                HStack(spacing: 8) {
-                    ForEach(-4...4, id: \.self) { index in
-                        let color: Color = index == 0 ? .green : index < 0 ? .cyan : .orange
-                        let lit = testing || selected.map { value in
-                            value == 0 ? index == 0 : (value < 0 ? (value...(-1)).contains(index) : (1...value).contains(index))
-                        } == true
-                        Circle()
-                            .fill(color.opacity(lit ? 1 : 0.22))
-                            .overlay(Circle().stroke(color.opacity(lit ? 1 : 0.6), lineWidth: lit ? 3 : 1))
-                            .overlay(Circle().fill(.white.opacity(lit ? 0.8 : 0)).padding(10))
-                            .shadow(color: color.opacity(lit ? 0.9 : 0), radius: 10)
-                            .aspectRatio(1, contentMode: .fit)
-                    }
-                }.frame(maxWidth: 660).padding(.vertical, 12).accessibilityHidden(true)
-                HStack {
-                    Text("← Zu schnell").foregroundStyle(.cyan)
-                    Spacer()
-                    Text("±0,5 s").foregroundStyle(.green)
-                    Spacer()
-                    Text("Zu langsam →").foregroundStyle(.orange)
-                }.font(.caption.bold())
-                if testing {
-                    Text("Lampentest · keine Messwerte").font(.headline)
-                } else if let deviation, deviation.isFinite {
-                    Text(abs(deviation) <= 0.5 ? "Im Takt" : deviation < 0 ? "Zu schnell · voraus" : "Zu langsam · zurück")
-                        .font(.headline)
-                    MeterValue("\(RallyFormat.deviation(deviation)) s", size: 48)
-                } else {
-                    Text(status).font(.subheadline)
-                    Text("LEDs bereit · noch kein Zeitvergleich").font(.caption)
-                }
-                if allowsTest {
-                    Button(testing ? "Lampentest beenden" : "LED-Lampentest") { testing.toggle() }
-                        .buttonStyle(.bordered).tint(.white).frame(minHeight: 44)
-                }
-        }.padding(20).frame(maxWidth: .infinity)
-            .foregroundStyle(.white)
-            .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 20))
-            .onChange(of: allowsTest) { _, allowed in if !allowed { testing = false } }
-    }
-}
 
 private struct CircuitGateEditor: View {
     @EnvironmentObject private var session: RallySession
@@ -437,6 +391,7 @@ private struct CircuitGateEditor: View {
     @State private var latitude = ""
     @State private var longitude = ""
     @State private var bearing = ""
+    @State private var name = ""
     private var gate: CircuitGate? {
         guard let lat = RallyFormat.parse(latitude), let lon = RallyFormat.parse(longitude),
               let direction = RallyFormat.parse(bearing) else { return nil }
@@ -447,6 +402,7 @@ private struct CircuitGateEditor: View {
         NavigationStack {
             Form {
                 Section("Start-/Zielpunkt") {
+                    OptionalNameField(placeholder: "Startpunkt \(session.circuitGPS.selectedStartPoint?.number ?? 1)", text: $name)
                     TextField("Breitengrad (z. B. 50,3356)", text: $latitude)
                     TextField("Längengrad (z. B. 6,9475)", text: $longitude)
                     Button("Aktuelle GPS-Position übernehmen") {
@@ -465,7 +421,7 @@ private struct CircuitGateEditor: View {
                         .font(.footnote)
                 }
                 Section {
-                    Text("Die Zielkoordinate und Fahrtrichtung bleiben nach einem App-Neustart gespeichert. Nur eine Änderung von Punkt oder Richtung setzt die bisherige Referenz und Rundenliste zurück.")
+                    Text("Name, Zielkoordinate und Fahrtrichtung bleiben gespeichert. Umbenennen erhält alle Runden. Eine Änderung von Punkt oder Richtung legt einen Startpunkt an und setzt die aktuellen Runden zurück; gespeicherte Referenzen bleiben auswählbar.")
                         .font(.footnote)
                 }
             }.navigationTitle("Start/Ziel")
@@ -473,11 +429,12 @@ private struct CircuitGateEditor: View {
                     ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Zielkoordinate speichern") {
-                            if let gate, session.configureCircuit(gate) { dismiss() }
+                            if let gate, session.changeCircuit({ $0.saveStartPoint(gate, name: name) }) { dismiss() }
                         }.disabled(gate == nil)
                     }
                 }
                 .onAppear {
+                    name = session.circuitGPS.selectedStartPoint?.name ?? ""
                     if let gate = session.circuitGPS.gate {
                         latitude = String(gate.latitude)
                         longitude = String(gate.longitude)

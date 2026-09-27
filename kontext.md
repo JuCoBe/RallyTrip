@@ -1,6 +1,6 @@
 # Kontext für KI-Agenten – RallyTrip
 
-Stand: 27. September 2026. Dokumentierter Funktionsstand: Commit `7da94bd` (Vollbild, gespeicherte Referenzen, LED-Sichtbarkeit). Dieses Dokument ist eine Übergabe, kein Ersatz für Codeprüfung oder aktuelle Git-/Test-Ergebnisse.
+Stand: 27. September 2026. Aktuelle Erweiterung: gemeinsame Regularity-/Circuit-LEDs und benannte Startpunkte/Referenzen auf Basis `cea552d`. Dieses Dokument ist eine Übergabe, kein Ersatz für Codeprüfung oder aktuelle Git-/Test-Ergebnisse.
 
 ## Zuerst die richtige Arbeitskopie bestimmen
 
@@ -9,7 +9,7 @@ Stand: 27. September 2026. Dokumentierter Funktionsstand: Commit `7da94bd` (Voll
 - Swift-App: `RallyTrip/RallyTrip/`; Core: `RallyTrip/Sources/RallyCore/`; Tests: `RallyTrip/Tests/RallyCoreTests/`; Watch: `RallyTrip/RallyWatch/`.
 - Aktuelle Anleitung/Prüfhistorie: `RallyTrip/README.md` und `RallyTrip/VALIDATION.md`.
 - **Website:** `docs/` im Repository-Hauptordner. Pages-Workflow: `.github/workflows/pages.yml`.
-- Seit `76798e1` existiert eine verschachtelte Kopie. Das Xcode-Projekt, Package und Quellen im Hauptordner sind älter. Nicht versehentlich dort App-Funktionen bearbeiten. Andere Root-Workflows und Paketskripte vor Verwendung auf ihre Arbeitsverzeichnisse prüfen; Root-CI ist kein Beleg für die aktive App.
+- Seit `76798e1` existiert eine verschachtelte Kopie. Das Xcode-Projekt, Package und Quellen im Hauptordner sind älter. Nicht versehentlich dort App-Funktionen bearbeiten. Der Root-iOS-Workflow baut jetzt die aktive App in `RallyTrip/`. Andere Root-Workflows und Paketskripte vor Verwendung auf ihre Arbeitsverzeichnisse prüfen.
 - Auf dem eingerichteten Mac liegt die einzige aktive Git-Kopie unter `~/Developer/RallyTrip`; `~/Documents/GitHub/RallyTrip` ist eine Verknüpfung. Weitere Verzeichnisse namens RallyTrip sind Quellordner, keine zusätzlichen Git-Kopien.
 
 ## Produktstand
@@ -20,21 +20,25 @@ Tripmaster: Total/Trip, Korrektur, gewichtete Kalibrierung, Fokus und Reset-Rüc
 
 Rundstrecke: GPS-Punkt plus Fahrtrichtung definieren eine 50-m-Startlinie. Überfahrt nur in korrekter Richtung, erneutes Scharfschalten nach 75 m Entfernung, mindestens 10 s zwischen Überfahrten. Überfahrtszeit interpoliert zwischen GPS-Punkten. Erste vollständige Runde setzt Referenz; weitere vergleichen sich damit. GPS-Lücken/ungültige Messungen verwerfen die laufende Runde und blenden LEDs aus. Referenzvergleich erfolgt bei gleicher gemessener Distanz, nicht identischer GPS-Position.
 
-LEDs: Blau voraus, Orange zurück, Grün ±0,5 s. Mehrere Lampen bei größerer Abweichung, dunkler Hintergrund und Lampentest im Stillstand. Vollbild in Regularity/Rundstrecke blendet Navigation, Tabs und Statusleiste aus; Ausstieg bleibt erreichbar.
+LEDs: eine gemeinsame `PaceLEDs`-Komponente in Components.swift für Regularity und Circuit, gemeinsame Schwellen in `PaceLED`. Regularity nutzt Istzeit minus Schnittplan-Sollzeit an gleicher Distanz; ungültige Daten ergeben nil. Blau voraus, Orange zurück, Grün ±0,5 s. Mehrere Lampen bei größerer Abweichung, dunkler Hintergrund und Lampentest im Stillstand. Vollbild in Regularity/Rundstrecke blendet Navigation, Tabs und Statusleiste aus; Ausstieg bleibt erreichbar.
 
-Koordinate, Referenzzeit, Profil und abgeschlossene Runden werden gespeichert. Identisches Speichern des Ziels erhält die Referenz; geändertes Ziel setzt sie zurück. Unvollständige Runde wird bei App-Neustart verworfen. Rundstrecken-Demo: 628-m-Kreis, gleiche Erkennungslogik, 1×/2×/5×, eigene Speicherung und unabhängige GPS-Quelle. Bei 0 km/h läuft die Uhr weiter.
+Koordinate, Referenzzeit, Profil und abgeschlossene Runden werden gespeichert. Identisches Speichern des Ziels erhält die Referenz; geändertes Ziel setzt die aktiven Runden zurück, gespeicherte Referenzen bleiben auswählbar. Unvollständige Runde wird bei App-Neustart verworfen. Rundstrecken-Demo: 628-m-Kreis, gleiche Erkennungslogik, 1×/2×/5×, eigene Speicherung und unabhängige GPS-Quelle. Bei 0 km/h läuft die Uhr weiter.
+
+Namen und Auswahl: `NamedCircuitItem<Value>` verwendet UUID, Nummer und optionalen Namen im bestehenden `CircuitGPSArchive`. Alte aktive Daten werden zu Startpunkt 1 / Referenzrunde 1 migriert. Referenzpayload enthält bestehende CircuitGate/CircuitLap/Trace-Modelle. Umbenennen ändert nur Metadaten. „Neue Referenz aufzeichnen“ erhält gespeicherte Referenzen; Reset/Löschen entfernt nur die betroffene Referenz. Namenseingabe, Auswahl und Rename-Dialog sind gemeinsame UI-Komponenten; `changeCircuit` speichert Änderungen mit Rücknahme bei Speicherfehlern. Demo/Real bleiben getrennt.
 
 ## Wichtige Implementierungsstellen
 
 - `RallyTrip/Sources/RallyCore/RegularityEngine.swift`: RegularityEngine, CircuitTimer, CircuitGate, GPSCircuitEngine, Archive und Referenzprofil.
 - `RallyTrip/Sources/RallyCore/DistanceEngine.swift`: GPS-Qualitäts-/Sprungfilter, Streckenzähler.
 - `RallyTrip/RallyTrip/Services/RallySession.swift`: Zustand, Uhren, getrennte Circuit-GPS-Quelle, Demo, Speicherung.
-- `RallyTrip/RallyTrip/Views/RegularityView.swift`: Regularity, Rundstrecke, LED-Anzeige und Zieleingabe.
-- `RallyTrip/RallyTrip/Views/Components.swift`: gemeinsame Anzeigen/Vollbild-Bausteine.
+- `RallyTrip/RallyTrip/Views/RegularityView.swift`: Regularity, Rundstrecke und Zieleingabe.
+- `RallyTrip/RallyTrip/Views/Components.swift`: gemeinsame LED-/Namens-/Auswahl-/Vollbild-Bausteine.
 - `RallyTrip/RallyTrip/Views/HomeView.swift`: Navigation.
 - `RallyTrip/RallyTrip/Views/SettingsView.swift`: Einstellungen und Demo-Geschwindigkeit.
 
 ## Verifiziert / noch offen
+
+- Aktuelle Erweiterung: 57 Core-Tests unter WSL erfolgreich; Syntax- und Projektstrukturprüfung erfolgreich. Neuer Apple-SDK-Build wird nach dem Push geprüft.
 
 - 27.09.: `swift test` in der aktiven App auf dem Mac: 49 Tests bestanden.
 - 27.09.: Apple-SDK-Simulator-Build von `7da94bd` erfolgreich und auf iPhone-17-Pro-Simulator gestartet; eingebettetes Watch-Target mitgebaut.

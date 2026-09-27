@@ -22,6 +22,92 @@ struct DrivingFullscreen: ViewModifier {
     }
 }
 
+struct OptionalNameField: View {
+    let placeholder: String
+    @Binding var text: String
+    var body: some View {
+        TextField("Name (optional)", text: $text, prompt: Text(placeholder))
+            .textInputAutocapitalization(.sentences)
+            .submitLabel(.done).frame(minHeight: 44)
+            .accessibilityLabel("Name, optional. Ohne Eingabe: \(placeholder)")
+    }
+}
+
+/// Shared selection and rename controls; names never act as storage keys.
+struct NamedCircuitMenu<Value: Codable>: View {
+    let items: [NamedCircuitItem<Value>]
+    let selectedID: UUID?
+    let kind: String
+    let canSelect: Bool
+    let select: (UUID) -> Bool
+    let rename: (UUID, String) -> Bool
+    var delete: ((UUID) -> Bool)? = nil
+    @State private var editing: NamedCircuitItem<Value>?
+    @State private var deleting: NamedCircuitItem<Value>?
+
+    var body: some View {
+        Menu {
+            Section("Auswählen") {
+                ForEach(items) { item in
+                    Button { _ = select(item.id) } label: {
+                        Label(item.displayName(kind), systemImage: item.id == selectedID ? "checkmark.circle.fill" : "circle")
+                    }.disabled(!canSelect)
+                }
+            }
+            Section("Umbenennen") {
+                ForEach(items) { item in
+                    Button(item.displayName(kind), systemImage: "pencil") { editing = item }
+                }
+            }
+            if delete != nil {
+                Section("Löschen") {
+                    ForEach(items) { item in
+                        Button(item.displayName(kind), role: .destructive) { deleting = item }
+                            .disabled(!canSelect)
+                    }
+                }
+            }
+        } label: {
+            Label("\(kind): \(items.first { $0.id == selectedID }?.displayName(kind) ?? "Auswählen")", systemImage: "chevron.up.chevron.down")
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }.buttonStyle(.bordered)
+            .sheet(item: $editing) { item in
+                CircuitNameEditor(title: "\(kind) umbenennen", name: item.name ?? "",
+                                  placeholder: "\(kind) \(item.number)") { name in rename(item.id, name) }
+            }
+            .confirmationDialog("\(deleting?.displayName(kind) ?? kind) löschen? Ist diese Referenz aktiv, werden auch die aktuellen Vergleichsrunden gelöscht.",
+                                isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
+                Button("Löschen", role: .destructive) {
+                    if let item = deleting { _ = delete?(item.id) }
+                    deleting = nil
+                }
+            }
+    }
+}
+
+private struct CircuitNameEditor: View {
+    @Environment(\.dismiss) private var dismiss
+    let title: String
+    @State var name: String
+    let placeholder: String
+    let save: (String) -> Bool
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                OptionalNameField(placeholder: placeholder, text: $name)
+                Text("Leer lassen, um „\(placeholder)“ zu verwenden.").font(.caption)
+            }.navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Speichern") { if save(name) { dismiss() } }
+                    }
+                }
+        }.presentationDetents([.medium, .large])
+    }
+}
+
 enum RallyStyle {
     static let accent = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
@@ -206,5 +292,57 @@ struct NumericField: View {
                 Text(unit).foregroundStyle(.secondary).fixedSize()
             }
         }
+    }
+}
+
+struct PaceLEDs: View {
+    let deviation: Double?
+    var title = "Tempo gegenüber Referenzrunde"
+    let status: String
+    var allowsTest = false
+    @State private var testing = false
+    private var selected: Int? { PaceLED.position(deviation: deviation) }
+    var body: some View {
+        VStack(spacing: 16) {
+                Text(title).font(.subheadline.weight(.semibold))
+                HStack(spacing: 8) {
+                    ForEach(-4...4, id: \.self) { index in
+                        let color: Color = index == 0 ? .green : index < 0 ? .cyan : .orange
+                        let lit = testing || selected.map { value in
+                            value == 0 ? index == 0 : (value < 0 ? (value...(-1)).contains(index) : (1...value).contains(index))
+                        } == true
+                        Circle()
+                            .fill(color.opacity(lit ? 1 : 0.22))
+                            .overlay(Circle().stroke(color.opacity(lit ? 1 : 0.6), lineWidth: lit ? 3 : 1))
+                            .overlay(Circle().fill(.white.opacity(lit ? 0.8 : 0)).padding(10))
+                            .shadow(color: color.opacity(lit ? 0.9 : 0), radius: 10)
+                            .aspectRatio(1, contentMode: .fit)
+                    }
+                }.frame(maxWidth: 660).padding(.vertical, 12).accessibilityHidden(true)
+                HStack {
+                    Text("← Zu schnell").foregroundStyle(.cyan)
+                    Spacer()
+                    Text("±0,5 s").foregroundStyle(.green)
+                    Spacer()
+                    Text("Zu langsam →").foregroundStyle(.orange)
+                }.font(.caption.bold())
+                if testing {
+                    Text("Lampentest · keine Messwerte").font(.headline)
+                } else if let deviation, deviation.isFinite {
+                    Text(abs(deviation) <= 0.5 ? "Im Takt" : deviation < 0 ? "Zu schnell · voraus" : "Zu langsam · zurück")
+                        .font(.headline)
+                    MeterValue("\(RallyFormat.deviation(deviation)) s", size: 48)
+                } else {
+                    Text(status).font(.subheadline)
+                    Text("LEDs bereit · noch kein Zeitvergleich").font(.caption)
+                }
+                if allowsTest {
+                    Button(testing ? "Lampentest beenden" : "LED-Lampentest") { testing.toggle() }
+                        .buttonStyle(.bordered).tint(.white).frame(minHeight: 44)
+                }
+        }.padding(20).frame(maxWidth: .infinity)
+            .foregroundStyle(.white)
+            .background(Color(white: 0.055), in: RoundedRectangle(cornerRadius: 20))
+            .onChange(of: allowsTest) { _, allowed in if !allowed { testing = false } }
     }
 }
